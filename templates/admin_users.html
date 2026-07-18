@@ -34,7 +34,7 @@
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                 <div>
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Users</p>
-                    <h3 class="text-2xl font-black text-slate-800 mt-1">{{ stats.total_users if stats else 0 }}</h3>
+                    <h3 class="text-2xl font-black text-slate-880 mt-1">{{ stats.total_users if stats else 0 }}</h3>
                 </div>
                 <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500"><i class="fa-solid fa-users"></i></div>
             </div>
@@ -59,14 +59,14 @@
                 </div>
                 <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500"><i class="fa-solid fa-box-open"></i></div>
             </div>
-            <div class="bg-white p-5 rounded-2xl border-2 {% if stats and stats.pending_count and stats.pending_count > 0 %}border-rose-500 bg-rose-50/20 animate-pulse{% else %}border-slate-200{% endif %} shadow-sm flex items-center justify-between">
+            <div class="bg-white p-5 rounded-2xl border-2 {% if stats and stats.pending_products_count and stats.pending_products_count > 0 %}border-rose-500 bg-rose-50/20 animate-pulse{% else %}border-slate-200{% endif %} shadow-sm flex items-center justify-between">
                 <div>
                     <p class="text-xs font-bold text-rose-500 uppercase tracking-wider">Pending Approvals</p>
                     <h3 class="text-2xl font-black text-rose-600 mt-1">
-                        {{ stats.pending_count if stats else 0 }}
+                        {{ stats.pending_products_count if stats else 0 }}
                     </h3>
                 </div>
-                <div class="w-10 h-10 {% if stats and stats.pending_count and stats.pending_count > 0 %}bg-rose-500 text-white{% else %}bg-slate-100 text-slate-400{% endif %} rounded-xl flex items-center justify-center">
+                <div class="w-10 h-10 {% if stats and stats.pending_products_count and stats.pending_products_count > 0 %}bg-rose-500 text-white{% else %}bg-slate-100 text-slate-400{% endif %} rounded-xl flex items-center justify-center">
                     <i class="fa-solid fa-clock"></i>
                 </div>
             </div>
@@ -102,7 +102,7 @@
                     </form>
 
                     <div class="max-h-[200px] overflow-y-auto space-y-2 pr-1">
-                        {% for cat in categories %}
+                        {% for cat in all_categories %}
                         <div class="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-sm">
                             <span class="font-medium text-slate-700">{{ cat.name }}</span>
                             <a href="/admin/delete-category/{{ cat.id }}" onclick="return confirm('Are you sure? Products in this category might become un-categorized.')" class="text-slate-400 hover:text-red-500 transition"><i class="fa-solid fa-trash-can text-xs"></i></a>
@@ -119,7 +119,6 @@
                 <h3 class="text-md font-bold text-slate-900 mb-2"><i class="fa-solid fa-bullhorn text-rose-500 me-2"></i>System-Wide Global Announcement</h3>
                 <p class="text-xs text-slate-400 mb-4">This message will instantly flash or scroll on top of every user's homepage.</p>
                 
-                <!-- [UPDATED] active_notice থাকলে সেটি ডিলিট করার অপশন -->
                 {% if active_notice %}
                 <div class="mb-4 p-4 bg-rose-50 border border-rose-100 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div class="flex-1">
@@ -163,7 +162,7 @@
                 <h3 class="text-white font-bold tracking-wide">Registered Student Directory</h3>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[950px]">
+                <table class="w-full text-left border-collapse min-w-[1000px]">
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase text-slate-500">
                             <th class="py-3.5 px-6">Student Name</th>
@@ -172,7 +171,7 @@
                             <th class="py-3.5 px-6">Phone</th>
                             <th class="py-3.5 px-6">Network IP</th>
                             <th class="py-3.5 px-6">Assigned Role</th>
-                            <th class="py-3.5 px-6 text-right">Moderation Action</th>
+                            <th class="py-3.5 px-6 text-center">Moderation Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 text-sm text-slate-700">
@@ -203,15 +202,20 @@
                                     </span>
                                 {% endif %}
                             </td>
-                            <td class="py-4 px-6 text-right whitespace-nowrap">
+                            <td class="py-4 px-6 text-center whitespace-nowrap space-x-2">
                                 {% if u.email != 'admin@diu.edu.bd' and u.role != 'admin' %}
                                     {% if u.is_banned == 0 %}
-                                        <a href="/admin/ban-user/{{ u.email }}" onclick="return confirm('CRITICAL: Ban this user? All their items will be hidden.')" class="bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-red-600 hover:text-white transition inline-flex items-center gap-1.5 shadow-sm">🚫 Ban User</a>
+                                        <a href="/admin/ban-user/{{ u.email }}" onclick="return confirm('CRITICAL: Ban this user? All their items will be hidden.')" class="bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-red-600 hover:text-white transition inline-flex items-center gap-1.5 shadow-sm">🚫 Ban</a>
                                     {% else %}
                                         <a href="/admin/unban-user/{{ u.email }}" class="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-emerald-600 hover:text-white transition inline-flex items-center gap-1.5 shadow-sm">🔓 Unban</a>
                                     {% endif %}
+                                    
+                                    <!-- 🗑️ PERMANENT DELETE BUTTON -->
+                                    <a href="/admin/delete-user/{{ u.email }}" onclick="return confirm('🚨 DANGER: Are you absolutely sure you want to PERMANENTLY DELETE this user account and all their data? This action cannot be undone.')" class="bg-rose-600 text-white px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-rose-700 transition inline-flex items-center gap-1.5 shadow-sm">
+                                        <i class="fa-solid fa-trash-can text-[10px]"></i> Delete Account
+                                    </a>
                                 {% else %}
-                                    <span class="text-xs text-slate-400 italic font-medium pr-4">Protected</span>
+                                    <span class="text-xs text-slate-400 italic font-medium">Protected</span>
                                 {% endif %}
                             </td>
                         </tr>
