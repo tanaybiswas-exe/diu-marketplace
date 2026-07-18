@@ -747,6 +747,27 @@ def update_profile_pic():
     return redirect(url_for('user_profile', email=session['user_email']))
 
 
+# ==================== 🗑️ NEW: USER PROFILE PICTURE DELETE ROUTE ====================
+@app.route('/delete_profile_pic', methods=['POST'])
+def delete_profile_pic():
+    if 'user_email' not in session:
+        return redirect(url_for('login'))
+        
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        # ডেটাবেসে ছবির নাম পরিবর্তন করে পুনরায় ডিফল্ট ইমেজে ('default_avatar.png') সেট করে দিচ্ছে
+        cursor.execute("UPDATE users SET profile_pic = 'default_avatar.png' WHERE email = %s", (session['user_email'],))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        flash('Profile picture removed successfully!', 'success')
+    except Exception as e:
+        flash(f'Error removing picture: {str(e)}', 'danger')
+        
+    return redirect(url_for('user_profile', email=session['user_email']))
+
+
 @app.route('/add-product', methods=['GET', 'POST'])
 def add_product():
     if 'user_email' not in session:
@@ -1310,13 +1331,11 @@ def admin_delete_user(email):
     try:
         conn = get_db()
         cursor = conn.cursor()
-        # Foreign Key কনফ্লিক্ট বা এরর এড়াতে ইউজারের সাথে সম্পৃক্ত সব ডাটা আগে ডিলিট করা হচ্ছে
         cursor.execute("DELETE FROM products WHERE seller_email = %s", (email,))
         cursor.execute("DELETE FROM wishlist WHERE user_email = %s", (email,))
         cursor.execute("DELETE FROM comments WHERE user_email = %s", (email,))
         cursor.execute("DELETE FROM notifications WHERE user_email = %s", (email,))
         
-        # সবশেষে মূল ইউজার অ্যাকাউন্টটি ডিলিট করা হচ্ছে
         cursor.execute("DELETE FROM users WHERE email = %s", (email,))
         conn.commit()
         cursor.close()
