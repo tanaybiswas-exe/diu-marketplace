@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Gateway</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 flex items-center justify-center h-screen">
+    <div class="bg-gray-900 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-800">
+        <h2 class="text-2xl font-black text-center text-red-500 tracking-wider mb-2">⚡ ADMIN GATEWAY ⚡</h2>
+        <p class="text-center text-xs text-gray-500 mb-6">Secured Zone. Unauthorized access is restricted.</p>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, m in messages %}
+              <div class="p-3 rounded-lg text-xs font-semibold mb-4 text-center border {{ 'bg-red-900/40 text-red-400 border-red-800' if category == 'danger' else 'bg-emerald-900/40 text-emerald-400 border-emerald-800' }} \">
+                  {{ m }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="/diu-secret-gateway-2026" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Admin Email</label>
+                <input type="email" name="email" required placeholder="admin@diu.edu.bd" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white outline-none focus:border-red-500 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Secret Password</label>
+                <input type="password" name="password" required placeholder="••••••••" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white outline-none focus:border-red-500 text-sm">
+            </div>
+            
+            <button type="submit" class="w-full bg-red-600 text-white py-2.5 rounded-lg font-bold hover:bg-red-700 transition mt-2 active:scale-[0.98]">Verify Admin</button>
+        </form>
+
+        <div class="mt-6 border-t border-gray-800 pt-4 text-center">
+            <a href="/home" class="text-xs text-gray-500 hover:text-gray-400 underline font-semibold">← Back to Marketplace</a>
+        </div>
+    </div>
+</body>
+</html>

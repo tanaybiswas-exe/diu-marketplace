@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Admin Panel - DIU Marketplace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen antialiased text-slate-800 p-4 sm:p-6">
+    <div class="max-w-7xl mx-auto">
+        
+        <!-- Top Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                    <i class="fa-solid text-indigo-600 fa-shield-halved"></i> Master Control Panel
+                </h1>
+                <p class="text-slate-500 text-sm mt-1">Live Database Moderation & Analytics Engine</p>
+            </div>
+            <div class="flex items-center space-x-3 w-full sm:w-auto">
+                <a href="{{ url_for('home') }}" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl font-bold text-sm transition text-center flex-1 sm:flex-none inline-flex items-center justify-center gap-2 border border-slate-200">
+                    <i class="fa-solid fa-house text-xs"></i> Market
+                </a>
+                <a href="{{ url_for('logout') }}" class="bg-red-600 text-white px-5 py-2.5 rounded-xl hover:bg-red-700 font-bold text-sm transition text-center flex-1 sm:flex-none shadow-sm">
+                    Logout
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Users</p>
+                    <h3 class="text-2xl font-black text-slate-800 mt-1">{{ stats.total_users if stats else 0 }}</h3>
+                </div>
+                <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500"><i class="fa-solid fa-users"></i></div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Buyers</p>
+                    <h3 class="text-2xl font-black text-indigo-600 mt-1">{{ stats.total_buyers if stats else 0 }}</h3>
+                </div>
+                <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500"><i class="fa-solid fa-basket-shopping"></i></div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-amber-500 uppercase tracking-wider">Sellers</p>
+                    <h3 class="text-2xl font-black text-amber-600 mt-1">{{ stats.total_sellers if stats else 0 }}</h3>
+                </div>
+                <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500"><i class="fa-solid fa-store"></i></div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-emerald-500 uppercase tracking-wider">Total Products</p>
+                    <h3 class="text-2xl font-black text-emerald-600 mt-1">{{ stats.total_products if stats else 0 }}</h3>
+                </div>
+                <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500"><i class="fa-solid fa-box-open"></i></div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border-2 {% if stats and stats.pending_count and stats.pending_count > 0 %}border-rose-500 bg-rose-50/20 animate-pulse{% else %}border-slate-200{% endif %} shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-rose-500 uppercase tracking-wider">Pending Approvals</p>
+                    <h3 class="text-2xl font-black text-rose-600 mt-1">
+                        {{ stats.pending_count if stats else 0 }}
+                    </h3>
+                </div>
+                <div class="w-10 h-10 {% if stats and stats.pending_count and stats.pending_count > 0 %}bg-rose-500 text-white{% else %}bg-slate-100 text-slate-400{% endif %} rounded-xl flex items-center justify-center">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h3 class="text-md font-bold text-slate-800 mb-4"><i class="fa-solid fa-chart-pie text-indigo-500 me-2"></i>Product Distribution by Category</h3>
+                <div class="h-[260px] flex items-center justify-center">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h3 class="text-md font-bold text-slate-800 mb-4"><i class="fa-solid fa-chart-line text-emerald-500 me-2"></i>User Registration Growth (Last 7 Days)</h3>
+                <div class="h-[260px] flex items-center justify-center">
+                    <canvas id="userGrowthChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category & Announcement Controls -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Dynamic Categories -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm lg:col-span-1 flex flex-col justify-between">
+                <div>
+                    <h3 class="text-md font-bold text-slate-900 mb-2"><i class="fa-solid fa-tags text-amber-500 me-2"></i>Dynamic Categories</h3>
+                    <p class="text-xs text-slate-400 mb-4">Add or delete categories without editing code.</p>
+                    
+                    <form action="/admin/add-category" method="POST" class="flex gap-2 mb-4">
+                        <input type="text" name="category_name" placeholder="e.g., Cycles, Books" required class="flex-1 bg-slate-50 border border-slate-200 text-sm px-3 py-2 rounded-xl focus:outline-none focus:border-indigo-500 transition">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-sm">Add</button>
+                    </form>
+
+                    <div class="max-h-[200px] overflow-y-auto space-y-2 pr-1">
+                        {% for cat in categories %}
+                        <div class="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-sm">
+                            <span class="font-medium text-slate-700">{{ cat.name }}</span>
+                            <a href="/admin/delete-category/{{ cat.id }}" onclick="return confirm('Are you sure? Products in this category might become un-categorized.')" class="text-slate-400 hover:text-red-500 transition"><i class="fa-solid fa-trash-can text-xs"></i></a>
+                        </div>
+                        {% else %}
+                        <p class="text-xs text-slate-400 italic text-center py-4">No categories created yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Announcement -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
+                <h3 class="text-md font-bold text-slate-900 mb-2"><i class="fa-solid fa-bullhorn text-rose-500 me-2"></i>System-Wide Global Announcement</h3>
+                <p class="text-xs text-slate-400 mb-4">This message will instantly flash or scroll on top of every user's homepage.</p>
+                
+                <!-- [UPDATED] active_notice থাকলে সেটি ডিলিট করার অপশন -->
+                {% if active_notice %}
+                <div class="mb-4 p-4 bg-rose-50 border border-rose-100 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div class="flex-1">
+                        <span class="text-[10px] font-bold text-rose-600 uppercase tracking-wider block mb-0.5">Active Broadcast Notice:</span>
+                        <p class="text-sm text-slate-700 font-medium">"{{ active_notice.text }}"</p>
+                    </div>
+                    <a href="/admin/delete-announcement/{{ active_notice.id }}" onclick="return confirm('Are you sure you want to delete this announcement right now?')" class="w-full sm:w-auto text-center bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm whitespace-nowrap">
+                        <i class="fa-solid fa-trash-can me-1"></i> Delete Active Notice
+                    </a>
+                </div>
+                {% endif %}
+
+                <form action="/admin/send-announcement" method="POST">
+                    <textarea name="announcement_text" rows="3" placeholder="Type systemic alert or offer here... e.g., Server maintenance tonight at 11 PM or Eid Promotion Live!" required class="w-full bg-slate-50 border border-slate-200 text-sm p-3 rounded-xl focus:outline-none focus:border-rose-500 transition mb-3"></textarea>
+                    
+                    <div class="mb-4">
+                        <label for="notice_duration" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Notice Duration (নোটিশের সময়সীমা):</label>
+                        <select name="notice_duration" id="notice_duration" class="w-full sm:w-64 bg-slate-50 border border-slate-200 text-sm px-3 py-2 rounded-xl focus:outline-none focus:border-rose-500 text-slate-700 transition">
+                            <option value="1">1 Hour</option>
+                            <option value="6">6 Hours</option>
+                            <option value="12">12 Hours</option>
+                            <option value="24" selected>1 Day (24 Hours)</option>
+                            <option value="168">1 Week</option>
+                        </select>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <span class="text-[11px] text-amber-600 font-medium bg-amber-50 px-2 py-1 rounded border border-amber-100"><i class="fa-solid fa-circle-exclamation me-1"></i> Overwrites previous active notice.</span>
+                        <button type="submit" class="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition shadow-sm flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-paper-plane"></i> Broadcast Notice
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Student Directory Table -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+            <div class="bg-slate-900 px-6 py-4 flex items-center gap-2">
+                <i class="fa-solid fa-address-book text-slate-400"></i>
+                <h3 class="text-white font-bold tracking-wide">Registered Student Directory</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[950px]">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase text-slate-500">
+                            <th class="py-3.5 px-6">Student Name</th>
+                            <th class="py-3.5 px-6">ID Number</th>
+                            <th class="py-3.5 px-6">DIU Varsity Email</th>
+                            <th class="py-3.5 px-6">Phone</th>
+                            <th class="py-3.5 px-6">Network IP</th>
+                            <th class="py-3.5 px-6">Assigned Role</th>
+                            <th class="py-3.5 px-6 text-right">Moderation Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-sm text-slate-700">
+                        {% for u in all_users %}
+                        <tr class="hover:bg-slate-50/80 transition {% if u.is_banned == 1 %}bg-red-50/40{% endif %}">
+                            <td class="py-4 px-6 font-bold text-slate-900">
+                                <div class="flex items-center gap-2">
+                                    {{ u.name }}
+                                    {% if u.is_banned == 1 %}
+                                        <span class="bg-red-600 text-white text-[9px] font-black tracking-wider px-2 py-0.5 rounded-full shadow-sm">BANNED</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="py-4 px-6 font-mono text-xs text-slate-600">{{ u.student_id }}</td>
+                            <td class="py-4 px-6 text-indigo-600 font-medium">{{ u.email }}</td>
+                            <td class="py-4 px-6 text-slate-500 font-mono text-xs">{{ u.mobile if u.mobile else 'N/A' }}</td>
+                            <td class="py-4 px-6">
+                                <span class="bg-slate-100 text-slate-600 font-mono text-xs px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm">
+                                    {{ u.ip_address if u.ip_address else '127.0.0.1' }}
+                                </span>
+                            </td>
+                            <td class="py-4 px-6">
+                                {% if u.email == 'admin@diu.edu.bd' or u.role == 'admin' %}
+                                    <span class="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase bg-rose-100 text-rose-800 tracking-wide border border-rose-200">SUPER ADMIN</span>
+                                {% else %}
+                                    <span class="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wide border {% if u.role == 'seller' %}bg-amber-100 text-amber-800 border-amber-200{% else %}bg-blue-100 text-blue-800 border-blue-200{% endif %}">
+                                        {{ u.role | upper if u.role else 'BUYER' }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-4 px-6 text-right whitespace-nowrap">
+                                {% if u.email != 'admin@diu.edu.bd' and u.role != 'admin' %}
+                                    {% if u.is_banned == 0 %}
+                                        <a href="/admin/ban-user/{{ u.email }}" onclick="return confirm('CRITICAL: Ban this user? All their items will be hidden.')" class="bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-red-600 hover:text-white transition inline-flex items-center gap-1.5 shadow-sm">🚫 Ban User</a>
+                                    {% else %}
+                                        <a href="/admin/unban-user/{{ u.email }}" class="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-emerald-600 hover:text-white transition inline-flex items-center gap-1.5 shadow-sm">🔓 Unban</a>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-xs text-slate-400 italic font-medium pr-4">Protected</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="py-12 text-center text-slate-400">No students registered in the database.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Comments Table -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+            <div class="bg-slate-900 px-6 py-4 flex items-center gap-2">
+                <i class="fa-solid fa-comments text-slate-400"></i>
+                <h3 class="text-white font-bold tracking-wide">Public Q&A Comment Management</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[850px]">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase text-slate-500">
+                            <th class="py-3.5 px-6 w-1/4">User Info</th>
+                            <th class="py-3.5 px-6 w-1/5">Product Origin</th>
+                            <th class="py-3.5 px-6 w-2/5">Comment Thread Text</th>
+                            <th class="py-3.5 px-6 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-sm text-slate-700">
+                        {% for c in all_comments %}
+                        <tr class="hover:bg-slate-50/80 transition">
+                            <td class="py-4 px-6">
+                                <p class="font-bold text-slate-900">{{ c.user_name }}</p>
+                                <p class="text-xs text-slate-400">{{ c.user_email }}</p>
+                            </td>
+                            <td class="py-4 px-6">
+                                <a href="/home#product-{{ c.product_id }}" target="_blank" class="text-indigo-600 font-semibold hover:underline line-clamp-1">
+                                    {{ c.product_title }}
+                                </a>
+                            </td>
+                            <td class="py-4 px-6">
+                                <p class="text-slate-700 italic font-medium">"{{ c.text }}"</p>
+                                <span class="text-[10px] text-slate-400 font-mono block mt-1"><i class="fa-regular fa-clock me-1"></i>{{ c.timestamp }}</span>
+                            </td>
+                            <td class="py-4 px-6 text-right whitespace-nowrap">
+                                <a href="/admin/delete-comment/{{ c.id }}" onclick="return confirm('Delete this comment from the public product thread?')" class="bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-red-600 hover:text-white transition inline-flex items-center gap-1.5 shadow-sm">
+                                    <i class="fa-solid fa-trash-can text-[10px]"></i> Delete Comment
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="py-12 text-center text-slate-400">No public user comments logged yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Campus Listings Table -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div class="bg-slate-900 px-6 py-4 flex items-center gap-2">
+                <i class="fa-solid fa-boxes-stacked text-slate-400"></i>
+                <h3 class="text-white font-bold tracking-wide">Active Campus Listings & Moderation</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[800px]">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase text-slate-500">
+                            <th class="py-3.5 px-6 w-24">Product Image</th>
+                            <th class="py-3.5 px-6">Title & Category</th>
+                            <th class="py-3.5 px-6">Price</th>
+                            <th class="py-3.5 px-6">Current Status</th>
+                            <th class="py-3.5 px-6 text-right">Moderation Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-sm text-slate-700">
+                        {% for p in all_products %}
+                        <tr class="hover:bg-slate-50/80 transition">
+                            <td class="py-3 px-6">
+                                <img src="{{ p.photo_url if p.photo_url else 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=100&q=80' }}" class="w-12 h-12 object-cover rounded-xl border border-slate-200 bg-slate-50 shadow-sm" alt="Product Image">
+                            </td>
+                            <td class="py-3 px-6">
+                                <p class="font-bold text-slate-900 line-clamp-1 max-w-xs">{{ p.title }}</p>
+                                <span class="inline-block text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-md border border-slate-200 mt-0.5">{{ p.category if p.category else 'General' }}</span>
+                            </td>
+                            <td class="py-3 px-6 font-black text-emerald-600">{{ p.price }} ৳</td>
+                            <td class="py-3 px-6">
+                                {% if p.status == 'Pending' %}
+                                    <span class="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-800 border border-amber-200 font-bold px-2.5 py-1 rounded-full">
+                                        <span class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping"></span> Pending Approval
+                                    </span>
+                                {% elif p.status == 'Sold Out' %}
+                                    <span class="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-500 border border-slate-200 font-medium px-2.5 py-1 rounded-full">Sold Out</span>
+                                {% else %}
+                                    <span class="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 font-semibold px-2.5 py-1 rounded-full">
+                                        <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span> Active (Live)
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-6 text-right whitespace-nowrap space-x-1">
+                                {% if p.status == 'Pending' %}
+                                    <a href="/admin/approve-product/{{ p.id }}" class="bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-amber-500 hover:text-white transition inline-flex items-center gap-1 shadow-sm">✅ Approve</a>
+                                {% endif %}
+                                <a href="/admin/delete-product/{{ p.id }}" onclick="return confirm('Permanently remove this product listing?')" class="bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-red-600 hover:text-white transition inline-flex items-center gap-1 shadow-sm">🗑️ Delete</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="py-12 text-center text-slate-400">No uploaded products found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Charts Scripts -->
+    <script>
+        // --- ১. ক্যাটাগরি চার্ট (Doughnut Chart) ---
+        const catLabels = [];
+        const catCounts = [];
+        
+        {% if chart_data and chart_data.categories %}
+            {% for item in chart_data.categories %}
+                catLabels.push("{{ item.name }}");
+                catCounts.push({{ item.count }});
+            {% endfor %}
+        {% endif %}
+
+        const finalCatLabels = catLabels.length ? catLabels : ["Books", "Electronics", "Cycles", "Others"];
+        const finalCatCounts = catCounts.length ? catCounts : [10, 20, 15, 5];
+
+        const ctxCat = document.getElementById('categoryChart').getContext('2d');
+        new Chart(ctxCat, {
+            type: 'doughnut',
+            data: {
+                labels: finalCatLabels,
+                datasets: [{
+                    data: finalCatCounts,
+                    backgroundColor: ['#6366f1', '#3b82f6', '#f59e0b', '#10b981', '#ec4899'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 15,
+                            padding: 15,
+                            font: { size: 12, weight: '500' }
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+
+
+        // --- ২. ইউজার গ্রোথ চার্ট (Line Chart) ---
+        const timelineLabels = [];
+        const growthData = [];
+        
+        {% if chart_data and chart_data.user_growth %}
+            {% for data in chart_data.user_growth %}
+                timelineLabels.push("{{ data.date }}");
+                growthData.push({{ data.count }});
+            {% endfor %}
+        {% endif %}
+
+        const finalTimeLabels = timelineLabels.length ? timelineLabels : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        const finalGrowthData = growthData.length ? growthData : [4, 8, 12, 7, 18, 25, 20];
+
+        const ctxUser = document.getElementById('userGrowthChart').getContext('2d');
+        new Chart(ctxUser, {
+            type: 'line',
+            data: {
+                labels: finalTimeLabels,
+                datasets: [{
+                    label: 'New Registrations',
+                    data: finalGrowthData,
+                    borderColor: '#10b981', 
+                    backgroundColor: 'rgba(16, 185, 129, 0.06)', 
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#10b981',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 40,
+                            font: { size: 12 }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0, 0, 0, 0.04)' },
+                        ticks: { stepSize: 5 }
+                    },
+                    x: {
+                        grid: { display: false } 
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

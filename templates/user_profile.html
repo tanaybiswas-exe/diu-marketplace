@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - DIU Marketplace</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ==================== 🎨 PREMIUM NAVIGATION BAR ==================== */
+        .custom-navbar {
+            background-color: #0f172a !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .nav-link-custom {
+            color: #cbd5e1 !important;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .nav-link-custom:hover {
+            color: #38bdf8 !important;
+        }
+        
+        .btn-sell-custom {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            border: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        .btn-sell-custom:hover {
+            background-color: #1d4ed8 !important;
+            transform: translateY(-1px);
+        }
+
+        /* 📸 PROFILE IMAGE HOVER OVERLAY SYSTEM */
+        .avatar-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            border-radius: 50%;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border: 3px solid #f0f2f5;
+        }
+        .avatar-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .profile-pic-upload-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.75);
+            color: #fff;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .avatar-container:hover .profile-pic-upload-label {
+            opacity: 1;
+        }
+
+        /* 🔍 IMAGE ZOOM & CAROUSEL SYSTEM */
+        .zoom-wrapper {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 220px;
+            background-color: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            cursor: zoom-in;
+        }
+        .zoom-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.2s ease-out;
+        }
+        .modal-zoom-wrapper {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 380px;
+            background-color: #1e293b;
+            border-radius: 12px;
+            cursor: zoom-in;
+        }
+        .modal-zoom-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.15s ease-out;
+        }
+        .carousel-thumbnails {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-top: 10px;
+        }
+        .thumb-link {
+            width: 55px;
+            height: 55px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            opacity: 0.6;
+            transition: all 0.2s ease;
+        }
+        .thumb-link.active, .thumb-link:hover {
+            border-color: #2563eb;
+            opacity: 1;
+        }
+        .product-card {
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg custom-navbar sticky-top shadow-sm py-2.5">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-2 text-white text-uppercase tracking-tight" href="{{ url_for('home') }}" style="font-weight: 800; letter-spacing: -0.5px;">
+                <i class="fas fa-store text-success"></i> 
+                <span>DIU <span style="color: #38bdf8;">Marketplace</span></span>
+            </a>
+            <button class="navbar-toggler border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center gap-2">
+                    <li class="nav-item"><a class="nav-link nav-link-custom px-3" href="{{ url_for('home') }}"><i class="fas fa-home me-1 opacity-75"></i> Home</a></li>
+                    
+                    {% if current_user and current_user.role == 'seller' %}
+                        <li class="nav-item">
+                            <a class="btn btn-sell-custom btn-sm rounded-pill px-4 shadow-sm d-flex align-items-center gap-1 mx-1" href="{{ url_for('add_product') }}">
+                                <i class="fas fa-plus-circle"></i> Sell Item
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="nav-item"><a class="nav-link nav-link-custom px-3" href="{{ url_for('my_wishlist') }}"><i class="fas fa-heart text-danger me-1"></i> Wishlist</a></li>
+                    <li class="nav-item"><a class="nav-link nav-link-custom px-3 text-white fw-bold" href="{{ url_for('home') }}"><i class="fas fa-arrow-left opacity-75"></i> Back to Feed</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="container my-5">
+        {% set user_obj = profile_user if profile_user else user %}
+        {% set is_seller = user_obj and user_obj.role == 'seller' %}
+
+        <div class="row {% if not is_seller %}justify-content-center{% endif %}">
+            
+            <div class="{% if is_seller %}col-md-4{% else %}col-md-6{% endif %} mb-4">
+                <div class="card border-0 shadow-sm text-center p-5 rounded-4 bg-white">
+                    
+                    <div class="avatar-container mb-3">
+                        {% if user_obj.profile_pic and user_obj.profile_pic != 'default_avatar.png' %}
+                            <img src="{{ user_obj.profile_pic }}" alt="Avatar">
+                        {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ user_obj.name if user_obj else 'User' }}&background=random&size=128" alt="Default Avatar">
+                        {% endif %}
+                        
+                        {% if current_user and current_user.email == user_obj.email %}
+                            <form action="{{ url_for('update_profile_pic') }}" method="POST" enctype="multipart/form-data" id="profilePicForm">
+                                <label for="profile_pic_input" class="profile-pic-upload-label">
+                                    <i class="fas fa-camera"></i>
+                                </label>
+                                <input type="file" name="profile_pic" id="profile_pic_input" class="d-none" accept="image/*" onchange="document.getElementById('profilePicForm').submit();">
+                            </form>
+                        {% endif %}
+                    </div>
+                    
+                    <h3 class="fw-bold text-dark mb-1">{{ user_obj.name if user_obj else 'Marketplace User' }}</h3>
+                    <p class="text-muted mb-3"><i class="fas fa-envelope me-1"></i> {{ user_obj.email if user_obj else 'N/A' }}</p>
+                    
+                    <div class="d-flex justify-content-center gap-2">
+                        <span class="badge {% if is_seller %}bg-primary{% else %}bg-success{% endif %} px-4 py-2 rounded-pill text-uppercase tracking-wider" style="font-size: 12px;">
+                            Verified {{ user_obj.role if user_obj else 'User' }}
+                        </span>
+                    </div>
+
+                    {% if not is_seller %}
+                        <hr class="my-4 opacity-50">
+                        <p class="text-muted small px-3"><i class="fas fa-info-circle text-info me-1"></i> This is a verified Buyer account at DIU Marketplace. Buyers can browse, search campus products, and connect directly with sellers.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if is_seller %}
+            <div class="col-md-8">
+                <h4 class="fw-bold text-dark mb-4">
+                    <i class="fas fa-boxes text-secondary me-2"></i> Listed Campus Items ({% if products %}{{ products|length }}{% else %}0{% endif %})
+                </h4>
+                
+                <div class="row g-3">
+                    {% if not products %}
+                        <div class="col-12">
+                            <div class="card text-center p-5 border-0 shadow-sm rounded-4">
+                                <i class="fas fa-box-open fa-3x text-muted mb-3 opacity-50"></i>
+                                <p class="text-muted my-0">No active items published by this seller yet.</p>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% for product in products %}
+                    <div class="col-md-6" id="product-{{ product.id }}">
+                        <div class="card h-100 product-card shadow-sm border-0">
+                            
+                            {% if product.status == 'Pending' %}
+                                <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2 z-3">⏳ Pending</span>
+                            {% elif product.status == 'Sold Out' %}
+                                <span class="badge bg-danger position-absolute top-0 end-0 m-2 z-3">❌ Sold Out</span>
+                            {% else %}
+                                <span class="badge bg-success position-absolute top-0 end-0 m-2 z-3">✅ In Stock</span>
+                            {% endif %}
+
+                            <div class="zoom-wrapper image-zoom-trigger">
+                                <img src="{{ product.photo_url }}" alt="{{ product.title }}" loading="lazy">
+                            </div>
+                            <div class="card-body d-flex flex-column">
+                                <span class="badge bg-secondary align-self-start mb-2">{{ product.category }}</span>
+                                <h6 class="fw-bold text-dark text-truncate mb-1">{{ product.title }}</h6>
+                                <p class="text-success fw-bold mb-2">৳{{ product.price }}</p>
+                                
+                                <div class="mt-auto d-grid gap-2">
+                                    <button class="btn btn-outline-primary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modal-view-{{ product.id }}">
+                                        <i class="fas fa-eye"></i> View Details & Manage
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="modal-view-{{ product.id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content rounded-4 border-0 shadow">
+                                <div class="modal-header border-0 bg-dark text-white py-3">
+                                    <h5 class="modal-title fw-bold">{{ product.title }}</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row g-4">
+                                        <div class="col-md-6">
+                                            <div id="carousel-profile-{{ product.id }}" class="carousel slide" data-bs-ride="false">
+                                                <div class="carousel-inner modal-zoom-wrapper">
+                                                    <div class="carousel-item active image-zoom-trigger h-100">
+                                                        <img src="{{ product.photo_url }}" alt="Main Image">
+                                                    </div>
+                                                    {% if product.additional_photos %}
+                                                        {% for photo in product.additional_photos %}
+                                                        <div class="carousel-item image-zoom-trigger h-100">
+                                                            <img src="{{ photo }}" alt="Additional Image">
+                                                        </div>
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                {% if product.additional_photos %}
+                                                <button class="carousel-control-prev" type="button" data-bs-target="#carousel-profile-{{ product.id }}" data-bs-slide="prev">
+                                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                </button>
+                                                <button class="carousel-control-next" type="button" data-bs-target="#carousel-profile-{{ product.id }}" data-bs-slide="next">
+                                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                </button>
+                                                
+                                                <div class="carousel-thumbnails">
+                                                    <img src="{{ product.photo_url }}" data-bs-target="#carousel-profile-{{ product.id }}" data-bs-slide-to="0" class="thumb-link active">
+                                                    {% for photo in product.additional_photos %}
+                                                        <img src="{{ photo }}" data-bs-target="#carousel-profile-{{ product.id }}" data-bs-slide-to="{{ loop.index }}" class="thumb-link">
+                                                    {% endfor %}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            <p class="text-center text-muted mt-2 mb-0"><small><i class="fas fa-search-plus"></i> Move mouse to zoom selected photo</small></p>
+                                        </div>
+                                        
+                                        <div class="col-md-6 d-flex flex-column">
+                                            <h4 class="text-success fw-bold mb-2">৳{{ product.price }}</h4>
+                                            <table class="table table-sm table-borderless text-muted my-2">
+                                                <tr><td><strong>Category:</strong></td><td>{{ product.category }}</td></tr>
+                                                <tr><td><strong>Condition:</strong></td><td>{{ product.used_time }} Used</td></tr>
+                                                <tr><td><strong>Location:</strong></td><td>{{ product.location }}</td></tr>
+                                                <tr><td><strong>Status:</strong></td><td>
+                                                    {% if product.status == 'Pending' %}
+                                                        <span class="badge bg-warning text-dark">Pending Approval</span>
+                                                    {% elif product.status == 'Sold Out' %}
+                                                        <span class="badge bg-danger">Sold Out</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success">In Stock</span>
+                                                    {% endif %}
+                                                </td></tr>
+                                            </table>
+                                            <hr>
+                                            <p class="text-dark"><strong>Description:</strong><br>{{ product.description }}</p>
+                                            
+                                            <div class="mt-auto pt-3 d-grid gap-2">
+                                                {% if current_user and current_user.email == user_obj.email %}
+                                                    <div class="d-flex gap-2">
+                                                        <!-- Dynamic Toggle Button: Sold Out thakle Re-stock / In Stock korar option dynamically active hobe -->
+                                                        {% if product.status == 'Sold Out' %}
+                                                            <a href="{{ url_for('mark_available', product_id=product.id) if url_for('mark_available', product_id=product.id) is defined else url_for('mark_sold', product_id=product.id) }}" class="btn btn-info fw-bold text-white flex-grow-1 rounded-pill">
+                                                                <i class="fas fa-boxes"></i> Re-stock Item
+                                                            </a>
+                                                        {% else %}
+                                                            <a href="{{ url_for('mark_sold', product_id=product.id) }}" class="btn btn-success fw-bold flex-grow-1 rounded-pill">
+                                                                <i class="fas fa-check-double"></i> Mark Sold
+                                                            </a>
+                                                        {% endif %}
+                                                        <a href="{{ url_for('edit_product', product_id=product.id) }}" class="btn btn-warning fw-bold rounded-pill px-3">
+                                                            <i class="fas fa-edit"></i> Edit
+                                                        </a>
+                                                        <a href="{{ url_for('delete_product', product_id=product.id) }}" class="btn btn-danger fw-bold rounded-pill px-3" onclick="return confirm('Are you sure you want to delete this listing permanently?')">
+                                                            <i class="fas fa-trash"></i>
+                                                        </a>
+                                                    </div>
+                                                {% else %}
+                                                    {% if product.status == 'Available' or product.status == 'In Stock' %}
+                                                        <a href="{{ url_for('connect_buyer', product_id=product.id) }}" target="_blank" class="btn btn-success w-100 fw-bold rounded-pill py-2">
+                                                            <i class="fab fa-whatsapp"></i> Connect via WhatsApp
+                                                        </a>
+                                                    {% else %}
+                                                        <button class="btn btn-secondary w-100 fw-bold rounded-pill py-2" disabled>Item Already Sold Out</button>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // ==================== 🔍 LIVE IMAGE ZOOM SYSTEM ====================
+            const zoomContainers = document.querySelectorAll('.image-zoom-trigger');
+            zoomContainers.forEach(container => {
+                const img = container.querySelector('img');
+                if (img) {
+                    container.addEventListener('mousemove', function(e) {
+                        const rect = container.getBoundingClientRect();
+                        const x = ((e.clientX - rect.left) / rect.width) * 100;
+                        const y = ((e.clientY - rect.top) / rect.height) * 100;
+                        img.style.transformOrigin = `${x}% ${y}%`;
+                        img.style.transform = 'scale(2.2)'; 
+                    });
+                    container.addEventListener('mouseleave', function() {
+                        img.style.transformOrigin = 'center center';
+                        img.style.transform = 'scale(1)';
+                    });
+                }
+            });
+
+            const carousels = document.querySelectorAll('.carousel');
+            carousels.forEach(carousel => {
+                carousel.addEventListener('slide.bs.carousel', function (e) {
+                    const thumbs = carousel.querySelectorAll('.thumb-link');
+                    thumbs.forEach(t => t.classList.remove('active'));
+                    if(thumbs[e.to]) thumbs[e.to].classList.add('active');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

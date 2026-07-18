@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - DIU Smart Marketplace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-2xl shadow-xl border max-w-md w-full text-center">
+        
+        <h1 class="text-3xl font-black text-emerald-600 mb-2">DIU Smart Marketplace</h1>
+        <p class="text-sm text-gray-500 mb-6">The ultimate buy-sell platform exclusive for Daffodil International University students.</p>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, m in messages %}
+              {% if category == 'danger' %}
+                <div class="bg-red-100 text-red-700 p-3 rounded-lg text-xs font-semibold mb-4 text-center">
+                    {{ m }}
+                </div>
+              {% else %}
+                <div class="bg-emerald-100 text-emerald-700 p-3 rounded-lg text-xs font-semibold mb-4 text-center">
+                    {{ m }}
+                </div>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="space-y-3">
+            <a href="/register/buyer" class="block bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition shadow">🛒 Join as Buyer</a>
+            <a href="/register/seller" class="block bg-yellow-400 text-gray-900 font-bold py-3 rounded-xl hover:bg-yellow-300 transition shadow">💰 Join as Seller</a>
+            
+            <div class="border-t my-4 pt-4 text-xs text-gray-400">Already have an account?</div>
+            
+            <a href="/login" class="block bg-gray-100 text-gray-700 font-bold py-2.5 rounded-xl hover:bg-gray-200 transition">🔑 Log In</a>
+        </div>
+    </div>
+</body>
+</html>

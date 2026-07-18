@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIU Marketplace | Buy & Sell Secondhand Items</title>
+    <meta name="description" content="A trusted student-to-student marketplace for Daffodil International University (DIU). Buy and sell used books, electronics, and accessories safely.">
+    <meta name="keywords" content="DIU Marketplace, Daffodil University, Secondhand buy sell, DIU thrift store">
+    
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DIU Market">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ==================== 🎨 PREMIUM NAVIGATION BAR ==================== */
+        .custom-navbar {
+            background-color: #0f172a !important; 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .nav-link-custom {
+            color: #cbd5e1 !important;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .nav-link-custom:hover {
+            color: #38bdf8 !important; 
+        }
+        
+        .btn-sell-custom {
+            background-color: #2563eb !important; 
+            color: #ffffff !important;
+            font-weight: 600;
+            border: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        .btn-sell-custom:hover {
+            background-color: #1d4ed8 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+        }
+
+        .live-icon-status {
+            color: #10b981;
+            filter: drop-shadow(0 0 6px #10b981);
+            animation: pulseGlow 2s infinite;
+        }
+        @keyframes pulseGlow {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; filter: drop-shadow(0 0 10px #10b981); }
+            100% { opacity: 0.7; }
+        }
+
+        .notif-scroll {
+            max-height: 320px;
+            overflow-y: auto;
+            width: 340px !important;
+        }
+        .badge-notif {
+            font-size: 0.65rem;
+            padding: 0.25em 0.45em;
+            top: 2px !important;
+            right: -2px !important;
+        }
+
+        /* ==================== 🔍 IMAGE ZOOM & CAROUSEL SYSTEM ==================== */
+        .zoom-wrapper {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 250px;
+            background-color: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            cursor: zoom-in;
+        }
+
+        .zoom-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.2s ease-out;
+        }
+
+        .modal-zoom-wrapper {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 400px;
+            background-color: #1e293b;
+            border-radius: 12px;
+            cursor: zoom-in;
+        }
+
+        .modal-zoom-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.15s ease-out;
+        }
+
+        .carousel-thumbnails {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-top: 10px;
+        }
+        .thumb-link {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            opacity: 0.6;
+            transition: all 0.2s ease;
+        }
+        .thumb-link.active, .thumb-link:hover {
+            border-color: #2563eb;
+            opacity: 1;
+        }
+
+        .product-card {
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+        }
+        
+        /* Animation for announcement pulse */
+        .animate-pulse {
+            animation: pulse-danger 2s infinite;
+        }
+        @keyframes pulse-danger {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+
+        /* ==================== 📢 UN-CANCELABLE ANIMATED MARQUEE SYSTEM ==================== */
+        .marquee-container {
+            width: 100%;
+            background-color: #dc3545; 
+            color: #ffffff;
+            overflow: hidden;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            user-select: none;
+        }
+        .marquee-tag {
+            background-color: #a71d2a;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            z-index: 10;
+        }
+        .marquee-wrapper {
+            overflow: hidden;
+            width: 100%;
+            display: flex;
+        }
+        .marquee-text {
+            display: inline-block;
+            font-weight: 600;
+            font-size: 14px;
+            padding-left: 100%;
+            animation: marqueeEffect 25s linear infinite;
+        }
+        .marquee-text:hover {
+            animation-play-state: paused;
+            cursor: pointer;
+        }
+        @keyframes marqueeEffect {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+
+        html, body {
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .hover-link:hover {
+            color: #38bdf8 !important;
+            text-decoration: underline !important;
+            transition: 0.2s ease-in-out;
+        }
+        .hover-profile:hover .fw-black {
+            color: #38bdf8 !important;
+            text-decoration: underline !important;
+            transition: 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark custom-navbar sticky-top shadow-sm py-2">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-2 text-white text-uppercase" href="{{ url_for('home') }}" style="font-weight: 800; letter-spacing: -0.5px;">
+                <i class="fas fa-store live-icon-status"></i> 
+                <span>DIU <span style="color: #38bdf8;">Marketplace</span></span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center gap-2">
+                    <li class="nav-item"><a class="nav-link nav-link-custom px-3" href="{{ url_for('home') }}"><i class="fas fa-home me-1 opacity-75"></i> Home</a></li>
+                    {% if user and user.role == 'seller' %}
+                        <li class="nav-item">
+                            <a class="btn btn-sell-custom btn-sm rounded-pill px-4 shadow-sm d-flex align-items-center gap-1 mx-1" href="{{ url_for('add_product') }}">
+                                <i class="fas fa-plus-circle"></i> Sell Item
+                            </a>
+                        </li>
+                    {% endif %}
+                    <li class="nav-item"><a class="nav-link nav-link-custom px-3 position-relative" href="{{ url_for('my_wishlist') }}"><i class="fas fa-heart text-danger me-1"></i> Wishlist</a></li>
+                    
+                    <li class="nav-item dropdown px-2 position-relative">
+                        <a class="nav-link text-white position-relative p-1" href="#" id="notifDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-bell fa-lg nav-link-custom"></i>
+                            <span id="notif-count" class="position-absolute start-100 translate-middle badge rounded-pill bg-danger badge-notif d-none">0</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg p-2 notif-scroll mt-2 rounded-3 border-0" aria-labelledby="notifDropdown" id="notif-box">
+                            <li><p class="text-muted small text-center my-2">🔔 No new notifications</p></li>
+                        </ul>
+                    </li>
+
+                    {% if user %}
+                    <li class="nav-item dropdown ms-2 border-start ps-3 border-secondary border-opacity-50">
+                        <a class="nav-link dropdown-toggle fw-bold d-flex align-items-center gap-1" href="#" id="profileDrop" role="button" data-bs-toggle="dropdown" style="color: #e2e8f0;">
+                            <div class="bg-secondary bg-opacity-20 rounded-circle d-inline-flex p-1 align-items-center justify-content-center text-white me-1" style="width: 26px; height: 26px;">
+                                <i class="fas fa-user text-muted" style="font-size: 12px;"></i>
+                            </div>
+                            {{ user.name }}
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end shadow mt-2 border-0 rounded-3" aria-labelledby="profileDrop">
+                            <a class="dropdown-item py-2" href="{{ url_for('user_profile', email=user.email) }}"><i class="fas fa-id-card me-2 text-muted"></i> My Profile</a>
+                            <a class="dropdown-item py-2" href="{{ url_for('change_password') }}"><i class="fas fa-key me-2 text-muted"></i> Change Password</a>
+                            <hr class="dropdown-divider my-1">
+                            <a class="dropdown-item py-2 text-danger fw-bold" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i> Logout</a>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="nav-item ms-2"><a class="btn btn-outline-light btn-sm rounded-pill px-3" href="{{ url_for('login') }}">Login</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    {% if announcement %}
+    <div class="marquee-container">
+        <div class="marquee-tag shadow-sm">
+            <i class="fas fa-bullhorn animate-pulse"></i> NOTICE:
+        </div>
+        <div class="marquee-wrapper">
+            <div class="marquee-text">
+                ⚡ {{ announcement.text if announcement.text is defined else announcement }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ⚡ {{ announcement.text if announcement.text is defined else announcement }}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="container my-5">
+        <div class="row mb-4">
+            <div class="col-md-8 mx-auto">
+                <form action="{{ url_for('home') }}" method="GET" class="input-group shadow-sm">
+                    <input type="text" name="search" class="form-control" placeholder="Search products, books, electronics..." value="{{ request.args.get('search', '') }}">
+                    <select name="category" class="form-select" style="max-width: 180px;" aria-label="Category filter" onchange="this.form.submit()">
+                        <option value="">All Categories</option>
+                        {% if live_categories %}
+                            {% for cat in live_categories %}
+                                <option value="{{ cat }}" {% if request.args.get('category') == cat %}selected{% endif %}>{{ cat }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="Books" {% if request.args.get('category') == 'Books' %}selected{% endif %}>Books</option>
+                            <option value="Electronics" {% if request.args.get('category') == 'Electronics' %}selected{% endif %}>Electronics</option>
+                            <option value="Cycles" {% if request.args.get('category') == 'Cycles' %}selected{% endif %}>Cycles</option>
+                            <option value="Hostel Items" {% if request.args.get('category') == 'Hostel Items' %}selected{% endif %}>Hostel Items</option>
+                            <option value="Others" {% if request.args.get('category') == 'Others' %}selected{% endif %}>Others</option>
+                        {% endif %}
+                    </select>
+                    <button class="btn btn-primary px-4" type="submit"><i class="fas fa-search"></i> Search</button>
+                </form>
+            </div>
+        </div>
+
+        <h3 class="fw-bold mb-4 text-dark">{% if is_wishlist_page %}❤️ My Saved Wishlist{% else %}📢 Live Campus Market Feed{% endif %}</h3>
+        
+        <div class="row g-4">
+            {% if not products %}
+                <div class="col-12 text-center my-5">
+                    <p class="text-muted fs-4">No products listed yet!</p>
+                </div>
+            {% endif %}
+
+            {% for product in products %}
+            <div class="col-lg-4 col-md-6 col-sm-12" id="product-{{ product.id }}">
+                <div class="card h-100 product-card shadow-sm border-0">
+                    <!-- Status Badge for Stock status visibility on homepage -->
+                    {% if product.status == 'Sold Out' %}
+                        <span class="badge bg-danger position-absolute top-0 end-0 m-2 z-3" style="font-size: 11px;"><i class="fas fa-times-circle"></i> Sold Out</span>
+                    {% elif product.status == 'Pending' %}
+                        <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2 z-3" style="font-size: 11px;"><i class="fas fa-clock"></i> Pending</span>
+                    {% else %}
+                        <span class="badge bg-success position-absolute top-0 end-0 m-2 z-3" style="font-size: 11px;"><i class="fas fa-check-circle"></i> In Stock</span>
+                    {% endif %}
+
+                    <div class="zoom-wrapper image-zoom-trigger">
+                        <img src="{{ product.photo_url | default('https://placehold.co/600x400', true) }}" alt="{{ product.title }}" loading="lazy">
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <span class="badge bg-secondary align-self-start mb-2">{{ product.category }}</span>
+                        
+                        <h5 class="card-title fw-bold text-dark text-truncate">
+                            {{ product.title }}
+                        </h5>
+                        
+                        <p class="text-success fw-bold fs-5 mb-1">৳{{ product.price }}</p>
+                        <small class="text-muted mb-3 d-block"><i class="fas fa-map-marker-alt text-secondary"></i> {{ product.location }}</small>
+                        
+                        <div class="mt-auto d-flex justify-content-between align-items-center gap-2">
+                            <button class="btn btn-outline-primary btn-sm flex-grow-1 rounded-pill" data-bs-toggle="modal" data-bs-target="#modal-view-{{ product.id }}">
+                                <i class="fas fa-eye"></i> View Details
+                            </button>
+                            <button onclick="toggleWishlist(this, '{{ product.id }}')" class="btn btn-sm rounded-circle {% if product.is_fav %}btn-danger{% else %}btn-outline-danger{% endif %}" aria-label="Add to wishlist">
+                                <i class="{% if product.is_fav %}fas{% else %}far{% endif %} fa-heart"></i>
+                            </button>
+                        </div>
+
+                        {% if user and user.role == 'admin' and product.status == 'Pending' %}
+                            <div class="mt-2 pt-2 border-top">
+                                <a href="{{ url_for('admin_approve_product', product_id=product.id) }}" class="btn btn-success btn-sm w-100 fw-bold rounded-pill">
+                                    <i class="fas fa-check-circle"></i> Accept / Approve Post
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="modal-view-{{ product.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content rounded-4 border-0 shadow">
+                        <div class="modal-header border-0 bg-dark text-white py-3">
+                            <h5 class="modal-title fw-bold">{{ product.title }}</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <div id="carousel-product-{{ product.id }}" class="carousel slide" data-bs-ride="false">
+                                        <div class="carousel-inner modal-zoom-wrapper">
+                                            <div class="carousel-item active image-zoom-trigger h-100">
+                                                <img src="{{ product.photo_url | default('https://placehold.co/600x400', true) }}" alt="Main Image" loading="lazy">
+                                            </div>
+                                            {% if product.additional_photos %}
+                                                {% for photo in product.additional_photos %}
+                                                <div class="carousel-item image-zoom-trigger h-100">
+                                                    <img src="{{ photo }}" alt="Additional Image" loading="lazy">
+                                                </div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                        
+                                        {% if product.additional_photos %}
+                                        <button class="carousel-control-prev" type="button" data-bs-target="#carousel-product-{{ product.id }}" data-bs-slide="prev">
+                                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                            <span class="visually-hidden">Previous</span>
+                                        </button>
+                                        <button class="carousel-control-next" type="button" data-bs-target="#carousel-product-{{ product.id }}" data-bs-slide="next">
+                                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                            <span class="visually-hidden">Next</span>
+                                        </button>
+                                        
+                                        <div class="carousel-thumbnails">
+                                            <img src="{{ product.photo_url | default('https://placehold.co/600x400', true) }}" data-bs-target="#carousel-product-{{ product.id }}" data-bs-slide-to="0" class="thumb-link active" alt="Thumb Main">
+                                            {% for photo in product.additional_photos %}
+                                                <img src="{{ photo }}" data-bs-target="#carousel-product-{{ product.id }}" data-bs-slide-to="{{ loop.index }}" class="thumb-link" alt="Thumb {{ loop.index }}">
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <p class="text-center text-muted mt-2 mb-0"><small><i class="fas fa-search-plus"></i> Move mouse to zoom selected photo</small></p>
+                                </div>
+                                
+                                <div class="col-md-6 d-flex flex-column">
+                                    <h4 class="text-success fw-bold mb-2">৳{{ product.price }}</h4>
+                                    <table class="table table-sm table-borderless text-muted my-2">
+                                        <tbody>
+                                            <tr><td><strong>Category:</strong></td><td>{{ product.category }}</td></tr>
+                                            <tr><td><strong>Condition:</strong></td><td>{{ product.used_time }} Used</td></tr>
+                                            <tr><td><strong>Location:</strong></td><td>{{ product.location }}</td></tr>
+                                            <tr><td><strong>Status:</strong></td><td>
+                                                <span class="badge {% if product.status == 'Available' %}bg-success{% elif product.status == 'Pending' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                                    {% if product.status == 'Available' %}In Stock{% else %}{{ product.status }}{% endif %}
+                                                </span>
+                                            </td></tr>
+                                            <tr><td><strong>Seller:</strong></td><td><a href="{{ url_for('user_profile', email=product.seller_email) }}">{{ product.seller_email }}</a></td></tr>
+                                        </tbody>
+                                    </table>
+                                    <hr>
+                                    <p class="text-dark"><strong>Description:</strong><br>{{ product.description }}</p>
+                                    
+                                    <div class="mt-auto pt-3">
+                                        {% if product.status == 'Available' %}
+                                            <a href="{{ url_for('connect_buyer', product_id=product.id) }}" target="_blank" class="btn btn-success w-100 fw-bold rounded-pill py-2" rel="noopener">
+                                                <i class="fab fa-whatsapp"></i> Connect via WhatsApp
+                                            </a>
+                                        {% elif product.status == 'Pending' %}
+                                            <button class="btn btn-warning w-100 fw-bold rounded-pill py-2 text-dark" disabled>Under Admin Review</button>
+                                        {% else %}
+                                            <button class="btn btn-secondary w-100 fw-bold rounded-pill py-2" disabled><i class="fas fa-ban"></i> Item Already Sold Out</button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h6 class="fw-bold border-bottom pb-2 text-dark"><i class="fas fa-comments"></i> Public Q&A Thread</h6>
+                                    <div class="comment-container my-2 style-scroll" style="max-height: 150px; overflow-y: auto;">
+                                        {% if not product.comments %}
+                                            <p class="text-muted small my-3 text-center">No inquiries yet. Ask seller a question below!</p>
+                                        {% endif %}
+                                        {% for comment in product.comments %}
+                                            <div class="bg-light p-2 rounded mb-2 border-start border-primary border-3">
+                                                <div class="d-flex justify-content-between">
+                                                    <span class="small fw-bold text-dark">{{ comment.user_name }}</span>
+                                                    <span class="text-muted" style="font-size: 11px;">{{ comment.created_at }}</span>
+                                                </div>
+                                                <p class="mb-0 text-muted small">{{ comment.text }}</p>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    <form action="{{ url_for('add_comment', product_id=product.id) }}" method="POST" class="mt-3">
+                                        <div class="input-group">
+                                            <textarea name="comment_text" rows="1" class="form-control form-control-sm" placeholder="Ask a question..." style="resize: none;" required></textarea>
+                                            <button type="submit" class="btn btn-dark btn-sm px-3"><i class="fas fa-paper-plane"></i> Send</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white pt-5 pb-4 mt-5" style="background-color: #0f172a !important; border-top: 1px solid rgba(255, 255, 255, 0.05);">
+        <div class="container text-center text-md-start">
+            <div class="row text-center text-md-start">
+                
+                <div class="col-md-4 col-lg-4 col-xl-4 mx-auto mt-3">
+                    <h5 class="text-uppercase mb-4 font-weight-bold text-primary" style="color: #38bdf8 !important;">DIU Marketplace</h5>
+                    <p class="text-muted" style="font-size: 14px; color: #94a3b8 !important;">
+                        A secure and dedicated intra-university ecosystem designed exclusively for the students, faculty, and alumni of Daffodil International University to buy, sell, and exchange safely.
+                    </p>
+                </div>
+
+                <div class="col-md-3 col-lg-3 col-xl-3 mx-auto mt-3">
+                    <h5 class="text-uppercase mb-4 font-weight-bold text-primary" style="color: #38bdf8 !important;">Legal & Links</h5>
+                    <p><a href="/about" class="text-white text-decoration-none hover-link" style="font-size: 14px; color: #cbd5e1 !important;"> About Us</a></p>
+                    <p><a href="/privacy-policy" class="text-white text-decoration-none hover-link" style="font-size: 14px; color: #cbd5e1 !important;"> Privacy Policy</a></p>
+                    <p><a href="/terms-of-service" class="text-white text-decoration-none hover-link" style="font-size: 14px; color: #cbd5e1 !important;"> Terms of Service</a></p>
+                </div>
+
+                <div class="col-md-4 col-lg-4 col-xl-4 mx-auto mt-3 text-center text-md-start">
+                    <h5 class="text-uppercase mb-4 font-weight-bold text-primary" style="color: #38bdf8 !important;">Developed By</h5>
+                    <div class="d-flex align-items-center justify-content-center justify-content-md-start">
+                        <div>
+                            <a href="https://www.facebook.com/share/1J5NgXZAbr/" target="_blank" class="text-white text-decoration-none hover-profile d-block mb-1">
+                                <span class="fw-black" style="font-size: 16px; font-weight: 700; letter-spacing: -0.3px;">ByteBond</span> 
+                                <i class="fab fa-facebook text-primary ms-1" style="font-size: 14px; color: #38bdf8 !important;"></i>
+                            </a>
+                            <p class="mb-0" style="font-size: 13px; color: #94a3b8 !important;"></p>
+                            <p style="font-size: 12px; color: #64748b !important;">© 2026 All Rights Reserved</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <hr class="mb-4" style="background-color: rgba(255, 255, 255, 0.08);">
+
+            <div class="row align-items-center text-center">
+                <div class="col-md-12">
+                    <p class="mb-0" style="font-size: 13px; color: #64748b !important;">
+                        Built with <span class="text-danger">❤️</span> for DIU Community. Verified Campus Compliance Platform.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            // Service Worker Registration for PWA
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/service-worker.js')
+                        .then(reg => console.log('Service Worker Registered Engine!', reg.scope))
+                        .catch(err => console.log('Service Worker Registration Failed: ', err));
+                });
+            }
+
+            // Image Zoom Engine
+            function initZoomEngine() {
+                const zoomContainers = document.querySelectorAll('.image-zoom-trigger');
+                zoomContainers.forEach(container => {
+                    const img = container.querySelector('img');
+                    if(!img) return;
+                    
+                    container.addEventListener('mousemove', function(e) {
+                        const rect = container.getBoundingClientRect();
+                        const x = ((e.clientX - rect.left) / rect.width) * 100;
+                        const y = ((e.clientY - rect.top) / rect.height) * 100;
+                        img.style.transformOrigin = `${x}% ${y}%`;
+                        img.style.transform = 'scale(2.2)'; 
+                    });
+                    container.addEventListener('mouseleave', function() {
+                        img.style.transformOrigin = 'center center';
+                        img.style.transform = 'scale(1)';
+                    });
+                });
+            }
+            initZoomEngine();
+
+            const carousels = document.querySelectorAll('.carousel');
+            carousels.forEach(carousel => {
+                carousel.addEventListener('slide.bs.carousel', function (e) {
+                    const thumbs = carousel.querySelectorAll('.thumb-link');
+                    thumbs.forEach(t => t.classList.remove('active'));
+                    if(thumbs[e.to]) thumbs[e.to].classList.add('active');
+                });
+            });
+
+            // Notification Core (Updated with Clear All Button)
+            function fetchLiveNotifications() {
+                fetch('/api/notifications')
+                    .then(res => res.json())
+                    .then(data => {
+                        const countBadge = document.getElementById('notif-count');
+                        const notifBox = document.getElementById('notif-box');
+                        if (data && data.length > 0) {
+                            countBadge.innerText = data.length;
+                            countBadge.classList.remove('d-none');
+                            
+                            let htmlMarkup = `
+                                <li class="d-flex justify-content-between align-items-center px-3 py-1 border-bottom">
+                                    <span class="fw-bold small text-muted">Notifications</span>
+                                    <button onclick="clearAllNotifications(event)" class="btn btn-link text-danger text-decoration-none p-0 small" style="font-size: 12px;">
+                                        <i class="fas fa-trash-alt"></i> Clear All
+                                    </button>
+                                </li>
+                            `;
+                            
+                            data.forEach(n => {
+                                htmlMarkup += `<li><a class="dropdown-item text-wrap border-bottom py-2 small text-dark" href="#" onclick="handleNotificationClick(event, ${n.id}, ${n.product_id})">${n.message}</a></li>`;
+                            });
+                            notifBox.innerHTML = htmlMarkup;
+                        } else {
+                            countBadge.classList.add('d-none');
+                            notifBox.innerHTML = `<li><p class="text-muted small text-center my-2">🔔 No new notifications</p></li>`;
+                        }
+                    }).catch(err => console.error("Notification Error: ", err));
+            }
+
+            window.clearAllNotifications = function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                if (confirm("Are you sure you want to clear all notifications?")) {
+                    fetch('/api/notifications/clear', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            fetchLiveNotifications();
+                        } else {
+                            alert("Failed to clear notifications.");
+                        }
+                    }).catch(err => console.error("Clear Notification Error: ", err));
+                }
+            };
+
+            window.handleNotificationClick = function(event, notifId, productId) {
+                event.preventDefault();
+                fetch(`/click-notification/${notifId}/${productId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            window.location.hash = `product-${productId}`;
+                            
+                            const notifDropdown = bootstrap.Dropdown.getInstance(document.getElementById('notifDropdown'));
+                            if (notifDropdown) notifDropdown.hide();
+
+                            const targetModal = document.getElementById(`modal-view-${productId}`);
+                            if (targetModal) {
+                                const bsModal = new bootstrap.Modal(targetModal);
+                                bsModal.show();
+                            }
+                        }
+                    });
+            };
+
+            fetchLiveNotifications();
+            setInterval(fetchLiveNotifications, 8000);
+
+            if (window.location.hash) {
+                const hash = window.location.hash;
+                if (hash.startsWith('#product-')) {
+                    const productId = hash.replace('#product-', '');
+                    const targetModal = document.getElementById(`modal-view-${productId}`);
+                    if (targetModal) {
+                        const bsModal = new bootstrap.Modal(targetModal);
+                        bsModal.show();
+                    }
+                }
+            }
+
+            // Wishlist Engine (Fixed to match AJAX JSON Post Route)
+            window.toggleWishlist = function(button, productId) {
+                fetch('/toggle-wishlist', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ product_id: parseInt(productId) })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'unauthorized') {
+                        alert(data.message);
+                        return;
+                    }
+                    const icon = button.querySelector('i');
+                    if (data.action === 'added') {
+                        button.classList.remove('btn-outline-danger');
+                        button.classList.add('btn-danger');
+                        icon.classList.remove('far');
+                        icon.classList.add('fas');
+                    } else if (data.action === 'removed') {
+                        button.classList.remove('btn-danger');
+                        button.classList.add('btn-outline-danger');
+                        icon.classList.remove('fas');
+                        icon.classList.add('far');
+                        
+                        if(document.title.includes("Wishlist") || document.body.innerHTML.includes("Saved Wishlist")) {
+                            const targetCard = document.getElementById(`product-${productId}`);
+                            if (targetCard) {
+                                targetCard.style.transition = 'all 0.4s ease';
+                                targetCard.style.opacity = '0';
+                                targetCard.style.transform = 'scale(0.8)';
+                                setTimeout(() => { targetCard.remove(); }, 400);
+                            }
+                        }
+                    }
+                }).catch(err => console.error("Wishlist Error: ", err));
+            };
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Product - DIU Marketplace</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm p-4 rounded-4 bg-white">
+                    <h3 class="fw-bold mb-4 text-dark">Edit Campus Item</h3>
+                    
+                    <form action="{{ url_for('edit_product', product_id=product.id) }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Product Title</label>
+                            <input type="text" name="title" class="form-control" value="{{ product.title }}" required>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col">
+                                <label class="form-label fw-bold">Price (৳)</label>
+                                <input type="number" name="price" class="form-control" value="{{ product.price }}" required>
+                            </div>
+                            <div class="col">
+                                <label class="form-label fw-bold">Status</label>
+                                <select name="status" class="form-select" disabled>
+                                    <option value="Pending" selected>Pending (Requires Approval)</option>
+                                </select>
+                                <small class="text-muted d-block mt-1">Editing resets status to pending.</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Category</label>
+                            <select name="category" class="form-select" required>
+                                <option value="">Select Category</option>
+                                
+                                {% if live_categories %}
+                                    {% for cat in live_categories %}
+                                        <option value="{{ cat }}" {% if product.category == cat %}selected{% endif %}>{{ cat }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="Books" {% if product.category == 'Books' %}selected{% endif %}>Books</option>
+                                    <option value="Electronics" {% if product.category == 'Electronics' %}selected{% endif %}>Electronics</option>
+                                    <option value="Cycles" {% if product.category == 'Cycles' %}selected{% endif %}>Cycles</option>
+                                    <option value="Hostel Items" {% if product.category == 'Hostel Items' %}selected{% endif %}>Hostel Items</option>
+                                    <option value="Others" {% if product.category == 'Others' %}selected{% endif %}>Others</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col">
+                                <label class="form-label fw-bold">Used Duration</label>
+                                <input type="text" name="used_time" class="form-control" value="{{ product.used_time }}">
+                            </div>
+                            <div class="col">
+                                <label class="form-label fw-bold">Location/Campus</label>
+                                <input type="text" name="location" class="form-control" value="{{ product.location }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">WhatsApp Number</label>
+                            <input type="text" name="whatsapp" class="form-control" value="{{ product.whatsapp }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Description</label>
+                            <textarea name="description" class="form-control" rows="4" required>{{ product.description }}</textarea>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold">Save Changes</button>
+                            <a href="{{ url_for('user_profile', email=session['user_email']) }}" class="btn btn-outline-secondary w-100 rounded-pill">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
