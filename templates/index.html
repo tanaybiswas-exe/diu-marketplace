@@ -209,7 +209,7 @@
         }
     </style>
 </head>
-<body class="bg-light">
+<body class="bg-light min-vh-100 d-flex flex-column">
 
     <nav class="navbar navbar-expand-lg navbar-dark custom-navbar sticky-top shadow-sm py-2">
         <div class="container">
@@ -278,7 +278,8 @@
     </div>
     {% endif %}
 
-    <div class="container my-5">
+    <!-- flex-grow-1 ক্লাস ব্যবহার করে মেইন অংশকে পুরো স্ক্রিনে ফিল করা হয়েছে -->
+    <main class="container my-5 flex-grow-1">
         <div class="row mb-4">
             <div class="col-md-8 mx-auto">
                 <form action="{{ url_for('home') }}" method="GET" class="input-group shadow-sm">
@@ -306,7 +307,7 @@
         
         <div class="row g-4">
             {% if not products %}
-                <div class="col-12 text-center my-5">
+                <div class="col-12 text-center my-5 py-5">
                     <p class="text-muted fs-4">No products listed yet!</p>
                 </div>
             {% endif %}
@@ -465,9 +466,10 @@
             </div>
             {% endfor %}
         </div>
-    </div>
+    </main>
 
-    <footer class="bg-dark text-white pt-5 pb-4 mt-5" style="background-color: #0f172a !important; border-top: 1px solid rgba(255, 255, 255, 0.05);">
+    <!-- mt-auto যোগ করে ফুটারকে সবসময় স্ক্রিনের নিচে পুশ করে রাখা হয়েছে -->
+    <footer class="bg-dark text-white pt-5 pb-4 mt-auto" style="background-color: #0f172a !important; border-top: 1px solid rgba(255, 255, 255, 0.05);">
         <div class="container text-center text-md-start">
             <div class="row text-center text-md-start">
                 
