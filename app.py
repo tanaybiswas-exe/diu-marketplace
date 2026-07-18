@@ -1302,6 +1302,30 @@ def admin_unban_user(email):
         pass
     return redirect(url_for('view_registered_users'))
 
+# ==================== 🗑️ NEW: PERMANENT USER DELETE ROUTE ====================
+@app.route('/admin/delete-user/<email>')
+def admin_delete_user(email):
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        # Foreign Key কনফ্লিক্ট বা এরর এড়াতে ইউজারের সাথে সম্পৃক্ত সব ডাটা আগে ডিলিট করা হচ্ছে
+        cursor.execute("DELETE FROM products WHERE seller_email = %s", (email,))
+        cursor.execute("DELETE FROM wishlist WHERE user_email = %s", (email,))
+        cursor.execute("DELETE FROM comments WHERE user_email = %s", (email,))
+        cursor.execute("DELETE FROM notifications WHERE user_email = %s", (email,))
+        
+        # সবশেষে মূল ইউজার অ্যাকাউন্টটি ডিলিট করা হচ্ছে
+        cursor.execute("DELETE FROM users WHERE email = %s", (email,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        flash("User account and all related data permanently deleted!", "success")
+    except Exception as e:
+        flash(f"Error deleting user: {str(e)}", "danger")
+    return redirect(url_for('view_registered_users'))
+
 @app.route('/admin/approve-product/<int:product_id>')
 def admin_approve_product(product_id):
     if not session.get('is_admin'):
