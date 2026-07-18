@@ -32,6 +32,9 @@ app.config['SESSION_COOKIE_SECURE'] = False
 
 app.config['MAX_CONTENT_LENGTH'] = 6 * 1024 * 1024
 
+# 🔑 এখানে আপনার নতুন এডমিন পাসওয়ার্ডটি সেট করুন 
+NEW_ADMIN_PASSWORD = "diu094admin"
+
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -116,7 +119,6 @@ def send_otp_email(target_email, otp_code, purpose="Verification"):
         return True
 
 # ==================== 🖥️ NEON POSTGRESQL CONFIGURATION ====================
-# Vercel Environment Variable থেকে DATABASE_URL নিবে, না থাকলে ডিফল্ট URL ব্যবহার করবে
 DATABASE_URL = os.environ.get(
     'DATABASE_URL', 
     'postgresql://neondb_owner:npg_mgZadRT4IBK7@ep-aged-sound-aozt30iz-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
@@ -232,18 +234,24 @@ def init_db():
         ''')
         conn.commit()
 
+        # 🔄 এডমিন অ্যাকাউন্ট হ্যান্ডলিং (নতুন পাসওয়ার্ড সিঙ্ক লজিক)
         cursor.execute("SELECT * FROM users WHERE email = 'admin@diu.edu.bd'")
         admin_exists = cursor.fetchone()
+        hashed_admin_pwd = generate_password_hash(NEW_ADMIN_PASSWORD)
         
         if not admin_exists:
-            hashed_admin_pwd = generate_password_hash("admin123")
             cursor.execute('''
                 INSERT INTO users (email, name, student_id, mobile, role, password, ip_address, is_banned)
                 VALUES ('admin@diu.edu.bd', 'System Admin', 'N/A', '01700000000', 'admin', %s, '127.0.0.1', 0)
             ''', (hashed_admin_pwd,))
-            conn.commit()
             print("👑 Default Admin Account injected successfully!")
-
+        else:
+            cursor.execute('''
+                UPDATE users SET password = %s WHERE email = 'admin@diu.edu.bd'
+            ''', (hashed_admin_pwd,))
+            print("🔄 Admin password synced/updated successfully!")
+            
+        conn.commit()
         cursor.close()
         conn.close()
         print("✅ Database initialized successfully!")
@@ -1048,7 +1056,6 @@ def change_password():
         
         try:
             conn = get_db()
-            # 👈 এখানে পূর্বের টাইপো এরর ফিক্স করা হয়েছে
             cursor = conn.cursor(cursor_factory=RealDictCursor) 
             cursor.execute('SELECT * FROM users WHERE email = %s', (user_email,))
             user = cursor.fetchone()
