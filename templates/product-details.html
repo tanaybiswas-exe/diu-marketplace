@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.title }} - DIU Marketplace</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #f4f6f9; }
+        
+        /* Main Image Styling */
+        .main-img-container {
+            position: relative;
+            cursor: zoom-in; /* মাউস আনলে জুম আইকন দেখাবে */
+            overflow: hidden;
+            border-radius: 12px;
+            background: #000;
+        }
+        .main-img { 
+            max-height: 420px; 
+            object-fit: contain; 
+            width: 100%; 
+            transition: transform 0.3s ease;
+        }
+        .main-img-container:hover .main-img {
+            transform: scale(1.02); /* হালকা হোভার ইফেক্ট */
+        }
+        .zoom-badge {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            pointer-events: none;
+        }
+
+        /* Thumbnail Gallery Styles */
+        .thumb-img { 
+            height: 70px; 
+            width: 70px; 
+            object-fit: cover; 
+            cursor: pointer; 
+            border-radius: 8px; 
+            border: 2px solid #dee2e6;
+            transition: all 0.2s ease-in-out;
+            opacity: 0.7;
+        }
+        .thumb-img:hover { opacity: 1; }
+        .thumb-img.active-thumb { 
+            border: 3px solid #0d6efd !important; 
+            opacity: 1; 
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(13, 110, 253, 0.25);
+        }
+
+        .product-card { border-radius: 16px; border: none; }
+        .badge-status { font-size: 0.85rem; padding: 6px 14px; border-radius: 20px; }
+        
+        /* Seller link styling */
+        .seller-link {
+            color: #0d6efd;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .seller-link:hover {
+            color: #0a58ca;
+            text-decoration: underline;
+        }
+
+        /* Fullscreen Modal Image Styling */
+        .modal-body img {
+            max-height: 80vh;
+            object-fit: contain;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
+        <div class="container">
+            <a href="{{ url_for('home') }}" class="text-white text-decoration-none fw-bold fs-6">
+                <i class="fas fa-arrow-left me-2"></i> Back to Feed
+            </a>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <div class="card product-card shadow-sm p-3 p-md-4 bg-white">
+            <div class="row g-4">
+                
+                <!-- Left Column: Image Gallery with Zoom Trigger -->
+                <div class="col-md-6">
+                    <!-- Main Image Box (Click to Zoom) -->
+                    <div class="main-img-container mb-3" onclick="openZoomModal()">
+                        <img id="currentImg" src="{{ product.photo_url }}" class="main-img" alt="{{ product.title }}">
+                        <span class="zoom-badge"><i class="fas fa-search-plus me-1"></i> Click to Zoom</span>
+                    </div>
+                    
+                    <!-- Thumbnails -->
+                    <div class="d-flex gap-2 overflow-auto pb-2">
+                        <img src="{{ product.photo_url }}" 
+                             class="thumb-img active-thumb" 
+                             onclick="changeImage(this)">
+
+                        {% for photo in product.additional_photos %}
+                            <img src="{{ photo }}" 
+                                 class="thumb-img" 
+                                 onclick="changeImage(this)">
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Right Column: Product Details -->
+                <div class="col-md-6 d-flex flex-column justify-content-between">
+                    <div>
+                        <!-- Category & Status Badge -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-secondary rounded-pill px-3 py-2">{{ product.category }}</span>
+                            
+                            {% if product.status == 'Available' %}
+                                <span class="badge bg-success badge-status fw-semibold"><i class="fas fa-check-circle me-1"></i> Available</span>
+                            {% elif product.status == 'Sold Out' %}
+                                <span class="badge bg-danger badge-status fw-semibold"><i class="fas fa-times-circle me-1"></i> Sold Out</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark badge-status fw-semibold">{{ product.status }}</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Title & Price -->
+                        <h2 class="fw-bold text-dark mt-2 mb-1">{{ product.title }}</h2>
+                        <h3 class="text-success fw-bold mb-4">৳ {{ product.price }}</h3>
+
+                        <hr class="text-muted">
+
+                        <!-- Information List -->
+                        <div class="vstack gap-2 my-3 fs-6">
+                            <div class="row">
+                                <div class="col-4 fw-bold text-secondary">Condition:</div>
+                                <div class="col-8">{{ product.used_time or 'Used' }}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4 fw-bold text-secondary">Location:</div>
+                                <div class="col-8 text-danger"><i class="fas fa-map-marker-alt me-1"></i> {{ product.location or 'Permanent Campus (Ashulia)' }}</div>
+                            </div>
+                            
+                            <!-- Seller Info -->
+                            <div class="row">
+                                <div class="col-4 fw-bold text-secondary">Seller:</div>
+                                <div class="col-8">
+                                    <a href="{{ url_for('user_profile', email=product.seller_email) }}" class="fw-bold seller-link">
+                                        <i class="fas fa-user-circle me-1"></i>{{ product.seller_name or 'Seller Profile' }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="text-muted">
+
+                        <!-- Description -->
+                        <div class="mt-3">
+                            <h6 class="fw-bold text-dark">Description:</h6>
+                            <p class="text-secondary small" style="white-space: pre-line;">{{ product.description }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <div class="mt-4">
+                        <a href="{{ url_for('connect_buyer', product_id=product.id) }}" target="_blank" class="btn btn-success btn-lg w-100 fw-bold shadow-sm">
+                            <i class="fab fa-whatsapp me-2 fs-5"></i> Contact via WhatsApp
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+
+            <hr class="my-5">
+
+            <!-- Comments Section -->
+            <div class="row">
+                <div class="col-12">
+                    <h5 class="fw-bold mb-3"><i class="far fa-comments me-2"></i> Questions & Discussion</h5>
+                    
+                    <form action="{{ url_for('add_comment', product_id=product.id) }}" method="POST" class="mb-4">
+                        <div class="input-group">
+                            <input type="text" name="comment_text" class="form-control form-control-lg fs-6" placeholder="Ask a question about this product..." required>
+                            <button class="btn btn-primary px-4 fw-semibold" type="submit">Post</button>
+                        </div>
+                    </form>
+
+                    <div class="list-group list-group-flush">
+                        {% for comment in product.comments %}
+                            <div class="list-group-item bg-light rounded-3 mb-2 p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <h6 class="mb-0 fw-bold text-dark">{{ comment.user_name }}</h6>
+                                </div>
+                                <p class="mb-0 text-secondary">{{ comment.text }}</p>
+                            </div>
+                        {% else %}
+                            <p class="text-muted small">No questions posted yet. Be the first to ask!</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 🔍 Image Zoom Modal (Full Screen Viewer) -->
+    <div class="modal fade" id="imageZoomModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-dark border-0">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-3">
+                    <img id="zoomedModalImg" src="" alt="Zoomed Image">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- JavaScript for Image Switching & Zoom Modal -->
+    <script>
+        // 1. Thumbnail Change Function
+        function changeImage(element) {
+            document.getElementById('currentImg').src = element.src;
+
+            let thumbnails = document.querySelectorAll('.thumb-img');
+            thumbnails.forEach(thumb => {
+                thumb.classList.remove('active-thumb');
+            });
+
+            element.classList.add('active-thumb');
+        }
+
+        // 2. Open Zoom Modal Function
+        function openZoomModal() {
+            let currentSrc = document.getElementById('currentImg').src;
+            document.getElementById('zoomedModalImg').src = currentSrc;
+            
+            let zoomModal = new bootstrap.Modal(document.getElementById('imageZoomModal'));
+            zoomModal.show();
+        }
+    </script>
+
+</body>
+</html>
