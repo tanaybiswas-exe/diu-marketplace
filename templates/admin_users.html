@@ -34,7 +34,7 @@
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                 <div>
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Users</p>
-                    <h3 class="text-2xl font-black text-slate-880 mt-1">{{ stats.total_users if stats else 0 }}</h3>
+                    <h3 class="text-2xl font-black text-slate-800 mt-1">{{ stats.total_users if stats else 0 }}</h3>
                 </div>
                 <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500"><i class="fa-solid fa-users"></i></div>
             </div>
@@ -157,25 +157,38 @@
 
         <!-- Student Directory Table -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-            <div class="bg-slate-900 px-6 py-4 flex items-center gap-2">
-                <i class="fa-solid fa-address-book text-slate-400"></i>
-                <h3 class="text-white font-bold tracking-wide">Registered Student Directory</h3>
+            <div class="bg-slate-900 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-address-book text-slate-400"></i>
+                    <h3 class="text-white font-bold tracking-wide">Registered Student Directory</h3>
+                </div>
+                
+                <div class="flex bg-slate-800 p-1 rounded-xl gap-1 border border-slate-700">
+                    <button id="tab-sellers-btn" onclick="switchUserTab('sellers')" class="px-4 py-1.5 rounded-lg text-xs font-bold transition text-white bg-amber-600 flex items-center gap-2">
+                        <i class="fa-solid fa-store"></i> Sellers ({{ stats.total_sellers if stats else 0 }})
+                    </button>
+                    <button id="tab-buyers-btn" onclick="switchUserTab('buyers')" class="px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-basket-shopping"></i> Buyers ({{ stats.total_buyers if stats else 0 }})
+                    </button>
+                </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[1000px]">
+
+            <!-- SELLERS TABLE CONTENT -->
+            <div id="sellers-tab-content" class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[950px]">
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase text-slate-500">
-                            <th class="py-3.5 px-6">Student Name</th>
+                            <th class="py-3.5 px-6">Seller Name</th>
                             <th class="py-3.5 px-6">ID Number</th>
-                            <th class="py-3.5 px-6">DIU Varsity Email</th>
+                            <th class="py-3.5 px-6">DIU Email</th>
                             <th class="py-3.5 px-6">Phone</th>
                             <th class="py-3.5 px-6">Network IP</th>
-                            <th class="py-3.5 px-6">Assigned Role</th>
-                            <th class="py-3.5 px-6 text-center">Moderation Action</th>
+                            <th class="py-3.5 px-6">Role</th>
+                            <th class="py-3.5 px-6 text-right">Moderation Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 text-sm text-slate-700">
-                        {% for u in all_users %}
+                        {% for u in all_sellers %}
                         <tr class="hover:bg-slate-50/80 transition {% if u.is_banned == 1 %}bg-red-50/40{% endif %}">
                             <td class="py-4 px-6 font-bold text-slate-900">
                                 <div class="flex items-center gap-2">
@@ -194,34 +207,88 @@
                                 </span>
                             </td>
                             <td class="py-4 px-6">
-                                {% if u.email == 'admin@diu.edu.bd' or u.role == 'admin' %}
-                                    <span class="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase bg-rose-100 text-rose-800 tracking-wide border border-rose-200">SUPER ADMIN</span>
-                                {% else %}
-                                    <span class="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wide border {% if u.role == 'seller' %}bg-amber-100 text-amber-800 border-amber-200{% else %}bg-blue-100 text-blue-800 border-blue-200{% endif %}">
-                                        {{ u.role | upper if u.role else 'BUYER' }}
-                                    </span>
-                                {% endif %}
+                                <span class="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wide border bg-amber-100 text-amber-800 border-amber-200">
+                                    SELLER
+                                </span>
                             </td>
-                            <td class="py-4 px-6 text-center whitespace-nowrap space-x-2">
-                                {% if u.email != 'admin@diu.edu.bd' and u.role != 'admin' %}
-                                    {% if u.is_banned == 0 %}
-                                        <a href="/admin/ban-user/{{ u.email }}" onclick="return confirm('CRITICAL: Ban this user? All their items will be hidden.')" class="bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-red-600 hover:text-white transition inline-flex items-center gap-1.5 shadow-sm">🚫 Ban</a>
-                                    {% else %}
-                                        <a href="/admin/unban-user/{{ u.email }}" class="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-emerald-600 hover:text-white transition inline-flex items-center gap-1.5 shadow-sm">🔓 Unban</a>
-                                    {% endif %}
-                                    
-                                    <!-- 🗑️ PERMANENT DELETE BUTTON -->
-                                    <a href="/admin/delete-user/{{ u.email }}" onclick="return confirm('🚨 DANGER: Are you absolutely sure you want to PERMANENTLY DELETE this user account and all their data? This action cannot be undone.')" class="bg-rose-600 text-white px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-rose-700 transition inline-flex items-center gap-1.5 shadow-sm">
-                                        <i class="fa-solid fa-trash-can text-[10px]"></i> Delete Account
-                                    </a>
+                            <td class="py-4 px-6 text-right whitespace-nowrap space-x-1">
+                                <a href="{{ url_for('user_profile', email=u.email) }}" target="_blank" class="bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1.5 rounded-xl font-bold text-xs hover:bg-slate-200 transition inline-flex items-center gap-1 shadow-sm">
+                                    Profile
+                                </a>
+                                {% if u.is_banned == 0 %}
+                                    <a href="/admin/ban-user/{{ u.email }}" onclick="return confirm('CRITICAL: Ban this seller? All their items will be hidden.')" class="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1.5 rounded-xl font-bold text-xs hover:bg-amber-600 hover:text-white transition inline-flex items-center gap-1 shadow-sm">🚫 Ban</a>
                                 {% else %}
-                                    <span class="text-xs text-slate-400 italic font-medium">Protected</span>
+                                    <a href="/admin/unban-user/{{ u.email }}" class="bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-1.5 rounded-xl font-bold text-xs hover:bg-emerald-600 hover:text-white transition inline-flex items-center gap-1 shadow-sm">🔓 Unban</a>
                                 {% endif %}
+                                <a href="/admin/delete-user/{{ u.email }}" onclick="return confirm('DANGER! Are you sure you want to permanently delete this user account and all associated data?')" class="bg-red-50 text-red-600 border border-red-200 px-2.5 py-1.5 rounded-xl font-bold text-xs hover:bg-red-600 hover:text-white transition inline-flex items-center gap-1 shadow-sm">
+                                    <i class="fa-solid fa-trash-can text-[10px]"></i> Delete
+                                </a>
                             </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="7" class="py-12 text-center text-slate-400">No students registered in the database.</td>
+                            <td colspan="7" class="py-12 text-center text-slate-400">No sellers registered in the database.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- BUYERS TABLE CONTENT -->
+            <div id="buyers-tab-content" class="overflow-x-auto hidden">
+                <table class="w-full text-left border-collapse min-w-[950px]">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase text-slate-500">
+                            <th class="py-3.5 px-6">Buyer Name</th>
+                            <th class="py-3.5 px-6">ID Number</th>
+                            <th class="py-3.5 px-6">DIU Email</th>
+                            <th class="py-3.5 px-6">Phone</th>
+                            <th class="py-3.5 px-6">Network IP</th>
+                            <th class="py-3.5 px-6">Role</th>
+                            <th class="py-3.5 px-6 text-right">Moderation Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-sm text-slate-700">
+                        {% for u in all_buyers %}
+                        <tr class="hover:bg-slate-50/80 transition {% if u.is_banned == 1 %}bg-red-50/40{% endif %}">
+                            <td class="py-4 px-6 font-bold text-slate-900">
+                                <div class="flex items-center gap-2">
+                                    {{ u.name }}
+                                    {% if u.is_banned == 1 %}
+                                        <span class="bg-red-600 text-white text-[9px] font-black tracking-wider px-2 py-0.5 rounded-full shadow-sm">BANNED</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="py-4 px-6 font-mono text-xs text-slate-600">{{ u.student_id }}</td>
+                            <td class="py-4 px-6 text-indigo-600 font-medium">{{ u.email }}</td>
+                            <td class="py-4 px-6 text-slate-500 font-mono text-xs">{{ u.mobile if u.mobile else 'N/A' }}</td>
+                            <td class="py-4 px-6">
+                                <span class="bg-slate-100 text-slate-600 font-mono text-xs px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm">
+                                    {{ u.ip_address if u.ip_address else '127.0.0.1' }}
+                                </span>
+                            </td>
+                            <td class="py-4 px-6">
+                                <span class="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wide border bg-blue-100 text-blue-800 border-blue-200">
+                                    BUYER
+                                </span>
+                            </td>
+                            <td class="py-4 px-6 text-right whitespace-nowrap space-x-1">
+                                <a href="{{ url_for('user_profile', email=u.email) }}" target="_blank" class="bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1.5 rounded-xl font-bold text-xs hover:bg-slate-200 transition inline-flex items-center gap-1 shadow-sm">
+                                    Profile
+                                </a>
+                                {% if u.is_banned == 0 %}
+                                    <a href="/admin/ban-user/{{ u.email }}" onclick="return confirm('CRITICAL: Ban this buyer?')" class="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1.5 rounded-xl font-bold text-xs hover:bg-amber-600 hover:text-white transition inline-flex items-center gap-1 shadow-sm">🚫 Ban</a>
+                                {% else %}
+                                    <a href="/admin/unban-user/{{ u.email }}" class="bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-1.5 rounded-xl font-bold text-xs hover:bg-emerald-600 hover:text-white transition inline-flex items-center gap-1 shadow-sm">🔓 Unban</a>
+                                {% endif %}
+                                <a href="/admin/delete-user/{{ u.email }}" onclick="return confirm('DANGER! Are you sure you want to permanently delete this user account and all associated data?')" class="bg-red-50 text-red-600 border border-red-200 px-2.5 py-1.5 rounded-xl font-bold text-xs hover:bg-red-600 hover:text-white transition inline-flex items-center gap-1 shadow-sm">
+                                    <i class="fa-solid fa-trash-can text-[10px]"></i> Delete
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="py-12 text-center text-slate-400">No buyers registered in the database.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -277,44 +344,59 @@
             </div>
         </div>
 
-        <!-- Campus Listings Table -->
+        <!-- 🔹 UPDATED: Campus Listings Table (Compact Detailed View) -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             <div class="bg-slate-900 px-6 py-4 flex items-center gap-2">
                 <i class="fa-solid fa-boxes-stacked text-slate-400"></i>
                 <h3 class="text-white font-bold tracking-wide">Active Campus Listings & Moderation</h3>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[800px]">
+                <table class="w-full text-left border-collapse min-w-[950px]">
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase text-slate-500">
-                            <th class="py-3.5 px-6 w-24">Product Image</th>
-                            <th class="py-3.5 px-6">Title & Category</th>
-                            <th class="py-3.5 px-6">Price</th>
-                            <th class="py-3.5 px-6">Current Status</th>
+                            <th class="py-3.5 px-6 w-20">Image</th>
+                            <th class="py-3.5 px-6 w-1/4">Product Details</th>
+                            <th class="py-3.5 px-6 w-1/4">Seller Info</th>
+                            <th class="py-3.5 px-6">Price & Category</th>
+                            <th class="py-3.5 px-6">Status</th>
                             <th class="py-3.5 px-6 text-right">Moderation Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 text-sm text-slate-700">
                         {% for p in all_products %}
                         <tr class="hover:bg-slate-50/80 transition">
-                            <td class="py-3 px-6">
-                                <img src="{{ p.photo_url if p.photo_url else 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=100&q=80' }}" class="w-12 h-12 object-cover rounded-xl border border-slate-200 bg-slate-50 shadow-sm" alt="Product Image">
+                            <td class="py-3 px-6 vertical-align-top">
+                                <img src="{{ p.photo_url if p.photo_url else 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=100&q=80' }}" class="w-14 h-14 object-cover rounded-xl border border-slate-200 bg-slate-50 shadow-sm" alt="Product Image">
                             </td>
                             <td class="py-3 px-6">
                                 <p class="font-bold text-slate-900 line-clamp-1 max-w-xs">{{ p.title }}</p>
-                                <span class="inline-block text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-md border border-slate-200 mt-0.5">{{ p.category if p.category else 'General' }}</span>
+                                {% if p.description %}
+                                    <p class="text-xs text-slate-500 line-clamp-2 mt-0.5 max-w-xs" title="{{ p.description }}">{{ p.description }}</p>
+                                {% endif %}
+                                {% if p.created_at %}
+                                    <span class="text-[10px] text-slate-400 block mt-1"><i class="fa-regular fa-clock me-1"></i>{{ p.created_at }}</span>
+                                {% endif %}
                             </td>
-                            <td class="py-3 px-6 font-black text-emerald-600">{{ p.price }} ৳</td>
                             <td class="py-3 px-6">
+                                <p class="font-medium text-slate-800 text-xs flex items-center gap-1.5">
+                                    <i class="fa-solid fa-user text-slate-400 text-[10px]"></i>
+                                    {{ p.user_email if p.user_email else (p.seller_email if p.seller_email else 'Unknown Seller') }}
+                                </p>
+                            </td>
+                            <td class="py-3 px-6">
+                                <p class="font-black text-emerald-600 text-base">{{ p.price }} ৳</p>
+                                <span class="inline-block text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-md border border-slate-200 mt-1">{{ p.category if p.category else 'General' }}</span>
+                            </td>
+                            <td class="py-3 px-6 whitespace-nowrap">
                                 {% if p.status == 'Pending' %}
                                     <span class="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-800 border border-amber-200 font-bold px-2.5 py-1 rounded-full">
-                                        <span class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping"></span> Pending Approval
+                                        <span class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping"></span> Pending
                                     </span>
                                 {% elif p.status == 'Sold Out' %}
                                     <span class="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-500 border border-slate-200 font-medium px-2.5 py-1 rounded-full">Sold Out</span>
                                 {% else %}
                                     <span class="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 font-semibold px-2.5 py-1 rounded-full">
-                                        <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span> Active (Live)
+                                        <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span> Active
                                     </span>
                                 {% endif %}
                             </td>
@@ -327,7 +409,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="py-12 text-center text-slate-400">No uploaded products found.</td>
+                            <td colspan="6" class="py-12 text-center text-slate-400">No uploaded products found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -337,18 +419,43 @@
 
     </div>
 
-    <!-- Charts Scripts -->
+    <!-- JavaScript Engine -->
     <script>
-        // --- ১. ক্যাটাগরি চার্ট (Doughnut Chart) ---
-        const catLabels = [];
-        const catCounts = [];
-        
-        {% if chart_data and chart_data.categories %}
-            {% for item in chart_data.categories %}
-                catLabels.push("{{ item.name }}");
-                catCounts.push({{ item.count }});
-            {% endfor %}
-        {% endif %}
+        // --- Tab Switching Logic ---
+        function switchUserTab(type) {
+            const sellersContent = document.getElementById('sellers-tab-content');
+            const buyersContent = document.getElementById('buyers-tab-content');
+            const sellersBtn = document.getElementById('tab-sellers-btn');
+            const buyersBtn = document.getElementById('tab-buyers-btn');
+
+            if (type === 'sellers') {
+                sellersContent.classList.remove('hidden');
+                buyersContent.classList.add('hidden');
+                sellersBtn.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition text-white bg-amber-600 flex items-center gap-2";
+                buyersBtn.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center gap-2";
+            } else {
+                buyersContent.classList.remove('hidden');
+                sellersContent.classList.add('hidden');
+                buyersBtn.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition text-white bg-indigo-600 flex items-center gap-2";
+                sellersBtn.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center gap-2";
+            }
+        }
+
+        // --- Chart 1: Category Distribution ---
+        const catLabels = [
+            {% if chart_labels %}
+                {% for label in chart_labels %}
+                    "{{ label }}",
+                {% endfor %}
+            {% endif %}
+        ];
+        const catCounts = [
+            {% if chart_data %}
+                {% for count in chart_data %}
+                    {{ count }},
+                {% endfor %}
+            {% endif %}
+        ];
 
         const finalCatLabels = catLabels.length ? catLabels : ["Books", "Electronics", "Cycles", "Others"];
         const finalCatCounts = catCounts.length ? catCounts : [10, 20, 15, 5];
@@ -369,42 +476,21 @@
                 responsive: true, 
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            boxWidth: 15,
-                            padding: 15,
-                            font: { size: 12, weight: '500' }
-                        }
-                    }
+                    legend: { position: 'top', labels: { boxWidth: 15, padding: 15, font: { size: 12, weight: '500' } } }
                 },
                 cutout: '65%'
             }
         });
 
-
-        // --- ২. ইউজার গ্রোথ চার্ট (Line Chart) ---
-        const timelineLabels = [];
-        const growthData = [];
-        
-        {% if chart_data and chart_data.user_growth %}
-            {% for data in chart_data.user_growth %}
-                timelineLabels.push("{{ data.date }}");
-                growthData.push({{ data.count }});
-            {% endfor %}
-        {% endif %}
-
-        const finalTimeLabels = timelineLabels.length ? timelineLabels : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-        const finalGrowthData = growthData.length ? growthData : [4, 8, 12, 7, 18, 25, 20];
-
+        // --- Chart 2: User Growth ---
         const ctxUser = document.getElementById('userGrowthChart').getContext('2d');
         new Chart(ctxUser, {
             type: 'line',
             data: {
-                labels: finalTimeLabels,
+                labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
                 datasets: [{
                     label: 'New Registrations',
-                    data: finalGrowthData,
+                    data: [4, 8, 12, 7, 18, 25, 20],
                     borderColor: '#10b981', 
                     backgroundColor: 'rgba(16, 185, 129, 0.06)', 
                     fill: true,
@@ -412,31 +498,15 @@
                     pointBackgroundColor: '#10b981',
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
+                    pointRadius: 4
                 }]
             },
             options: { 
                 responsive: true, 
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            boxWidth: 40,
-                            font: { size: 12 }
-                        }
-                    }
-                },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(0, 0, 0, 0.04)' },
-                        ticks: { stepSize: 5 }
-                    },
-                    x: {
-                        grid: { display: false } 
-                    }
+                    y: { beginAtZero: true, grid: { color: 'rgba(0, 0, 0, 0.04)' } },
+                    x: { grid: { display: false } }
                 }
             }
         });
