@@ -1,22 +1,21 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta  
-from urllib.parse import quote    
-from flask import send_from_directory         
 import os
 import re
 import requests
 import base64
-import psycopg2
-from psycopg2.extras import RealDictCursor
-
-# --- 📧 OTP সিস্টেমের জন্য প্রয়োজনীয় মডিউল ---
-import smtplib
 import random
+import smtplib
+from datetime import datetime, timedelta
+from urllib.parse import quote
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# --- 🛡️ রেট লিমিটিং মডিউল ---
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from flask import (
+    Flask, render_template, request, redirect, url_for, 
+    flash, session, jsonify, send_from_directory
+)
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -50,13 +49,11 @@ def add_header(r):
     r.headers["Expires"] = "0"
     return r
 
-# ফাইল সাইজ লিমিট এক্সসিড করলে হ্যান্ডলার
 @app.errorhandler(413)
 def request_entity_too_large(error):
     flash('❌ Upload failed! Total image size cannot be larger than 6MB.', 'danger')
     return redirect(request.referrer or url_for('home'))
 
-# রেট লিমিট ক্রস করলে ইউজারকে আটকানোর হ্যান্ডলার
 @app.errorhandler(429)
 def ratelimit_handler(e):
     flash(f"⚠️ Action Blocked: {e.description}", "danger")
@@ -65,7 +62,6 @@ def ratelimit_handler(e):
 # ==================== 🌐 RENDER KEEP-ALIVE ROUTE ====================
 @app.route('/ping')
 def ping():
-    """UptimeRobot দিয়ে সার্ভার অল-টাইম একটিভ রাখার রাউট"""
     return "Alive", 200
 
 # ==================== 📱 PWA STATIC ROOT SYSTEM PATHS ====================
@@ -87,7 +83,6 @@ SENDER_EMAIL = "admin094103@gmail.com"
 SENDER_PASSWORD = "fhfc gmih isil mkpn"      
 
 def send_otp_email(target_email, otp_code, purpose="Verification"):
-    """সরাসরি ইউজারের অফিশিয়াল মেইলে ওটিপি পাঠানোর কোর ফাংশন"""
     try:
         msg = MIMEMultipart()
         msg['From'] = SENDER_EMAIL
@@ -134,7 +129,6 @@ DB_CONFIG = {
 }
 
 def get_db():
-    """হাই-ট্রাফিক হ্যান্ডেল করার জন্য অপটিমাইজড কানেকশন মেথড"""
     conn = psycopg2.connect(
         dbname=DB_CONFIG["dbname"],
         user=DB_CONFIG["user"],
@@ -273,11 +267,9 @@ def init_db():
                 VALUES ('admin@diu.edu.bd', 'System Admin', 'N/A', '01700000000', 'admin', %s, '127.0.0.1', 0)
             ''', (hashed_admin_pwd,))
             conn.commit()
-            print("👑 Default Admin Account (admin@diu.edu.bd) injected successfully!")
 
         cursor.close()
         conn.close()
-        print("✅ Neon PostgreSQL Database initialized successfully!")
     except Exception as e:
         print(f"⚠️ Database Initialization Error: {str(e)}")
 
@@ -321,7 +313,7 @@ def click_notification(notif_id, product_id):
         return jsonify({'status': 'error'}), 500
 
 
-# ==================== ❤️ AJAX WISHLIST TOGGLE SYSTEM ====================
+# ==================== ❤️ WISHLIST TOGGLE SYSTEM ====================
 
 @app.route('/toggle-wishlist', methods=['POST'])
 def toggle_wishlist():
@@ -425,7 +417,7 @@ def register(role):
     return render_template('register.html', role=role)
 
 
-# ==================== 🔑 FORGOT PASSWORD & OTP SYSTEM ROUTES ====================
+# ==================== FORGOT PASSWORD & OTP ====================
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -456,7 +448,7 @@ def forgot_password():
             session['reset_email'] = email
             
             if send_otp_email(email, otp, "Password Reset"):
-                flash("📥 An OTP has been sent to your email. Enter it below to change password.", "success")
+                flash("📥 An OTP has been sent to your email.", "success")
                 return redirect(url_for('verify_otp', purpose='Reset'))
             else:
                 flash("❌ Failed to send OTP email.", "danger")
@@ -467,7 +459,7 @@ def forgot_password():
 
 
 @app.route('/resend-otp/<purpose>')
-@limiter.limit("5 per minute", error_message="Too many requests! Please wait 1 minute before requesting a new OTP.")
+@limiter.limit("5 per minute")
 def resend_otp(purpose):
     email = session.get('reg_data', {}).get('email') if purpose == 'Registration' else session.get('reset_email')
     
@@ -511,7 +503,7 @@ def verify_otp(purpose):
         email = session.get('reg_data', {}).get('email') if purpose == 'Registration' else session.get('reset_email')
         
         if not email:
-            flash("Session expired or invalid. Please try again.", "danger")
+            flash("Session expired or invalid.", "danger")
             return redirect(url_for('home'))
 
         try:
@@ -538,7 +530,7 @@ def verify_otp(purpose):
                     conn.commit()
                     
                     session.pop('reg_data', None)
-                    flash(" Verification successful! Account is active. Please login.", "success")
+                    flash("Verification successful! Account is active.", "success")
                     return redirect(url_for('login'))
                     
                 elif purpose == 'Reset':
@@ -551,10 +543,10 @@ def verify_otp(purpose):
                     conn.commit()
                     
                     session.pop('reset_email', None)
-                    flash("✅ Password updated successfully! Login with your new password.", "success")
+                    flash("✅ Password updated successfully!", "success")
                     return redirect(url_for('login'))
             else:
-                flash("❌ Invalid or Expired OTP Code! Please try again.", "danger")
+                flash("❌ Invalid or Expired OTP Code!", "danger")
                 
             cursor.close()
             conn.close()
@@ -583,7 +575,7 @@ def login():
 
             if user and check_password_hash(user['password'], password):
                 if user['is_banned'] == 1:
-                    flash("❌ Your account has been suspended by the administrator for violating marketplace rules.", "danger")
+                    flash("❌ Your account has been suspended.", "danger")
                     return redirect(url_for('login'))
 
                 session.clear()
@@ -747,6 +739,8 @@ def product_details_path(product_id):
         return f"<h1>Error loading product details</h1><p>{str(e)}</p>"
 
 
+# ==================== 👤 USER PROFILE ROUTE ====================
+
 @app.route('/user/profile/<email>')
 def user_profile(email):
     if 'user_email' not in session and not session.get('is_admin'):
@@ -781,19 +775,19 @@ def user_profile(email):
             logged_in_user = {
                 'email': session.get('user_email'),
                 'name': session.get('user_name'),
-                'role': session.get('user_role')
+                'role': session.get('user_role'),
+                'is_admin': session.get('is_admin', False)
             }
 
             cursor.close()
             conn.close()
             
-            # 🔥 HTML টেমপ্লেটের নাম চেক করে render_template ঠিক করা হলো
-            template_name = 'profile.html' if os.path.exists(os.path.join(template_dir, 'profile.html')) else 'user_profile.html'
+            template_name = 'user_profile.html' if os.path.exists(os.path.join(template_dir, 'user_profile.html')) else 'profile.html'
             
             return render_template(
                 template_name, 
                 profile_user=profile_user_dict, 
-                user=profile_user_dict, 
+                user=logged_in_user, 
                 current_user=logged_in_user, 
                 products=products
             )
@@ -851,7 +845,6 @@ def update_profile_pic():
     return redirect(url_for('user_profile', email=session['user_email']))
 
 
-# ==================== ❌ DELETE PROFILE PICTURE ROUTE ====================
 @app.route('/delete_profile_pic', methods=['POST'])
 def delete_profile_pic():
     if 'user_email' not in session:
@@ -892,7 +885,7 @@ def add_product():
         whatsapp = request.form.get('whatsapp')
 
         offer_text = request.form.get('offer_text', '').strip()
-        free_delivery = True if request.form.get('free_delivery') == 'true' else False
+        free_delivery = True if request.form.get('free_delivery') in ['true', 'on', '1'] else False
 
         try:
             price = int(price_raw)
@@ -914,7 +907,7 @@ def add_product():
                 payload = {'key': IMGBB_API_KEY, 'image': base64_image}
                 r = requests.post('https://api.imgbb.com/1/upload', data=payload)
                 res_data = r.json()
-                if res_data['success']:
+                if res_data.get('success'):
                     photo_url = res_data['data']['url']
             except Exception as e:
                 flash(f"Main Image Upload Error: {str(e)}", "danger")
@@ -941,7 +934,7 @@ def add_product():
                         add_response = requests.post('https://api.imgbb.com/1/upload', data=add_payload)
                         add_res_data = add_response.json()
                         
-                        if add_response.status_code == 200 and add_res_data['success']:
+                        if add_response.status_code == 200 and add_res_data.get('success'):
                             add_photo_url = add_res_data['data']['url']
                             cursor.execute('''
                                 INSERT INTO product_images (product_id, image_url) VALUES (%s, %s)
@@ -969,7 +962,7 @@ def add_product():
 
     return render_template('add_product.html', live_categories=live_categories)
 
-# ==================== 🔄 SELLER PRODUCT MANAGEMENT ====================
+# ==================== 🔄 SELLER PRODUCT MANAGEMENT (FIXED & COMPLETE) ====================
 
 @app.route('/mark-sold/<int:product_id>')
 def mark_sold(product_id):
@@ -1003,82 +996,150 @@ def mark_available(product_id):
         pass
     return redirect(url_for('user_profile', email=session['user_email']))
 
+# এডিট প্রোডাক্ট রুট (উভয় ইউআরএল ফর্মে ফিক্সড)
 @app.route('/edit-product/<int:product_id>', methods=['GET', 'POST'])
+@app.route('/edit_product/<int:product_id>', methods=['GET', 'POST'])
 def edit_product(product_id):
-    if 'user_email' not in session:
+    if 'user_email' not in session and not session.get('is_admin'):
+        flash("Please login to edit your product.", "danger")
         return redirect(url_for('login'))
         
-    conn = get_db()
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
-    cursor.execute("SELECT * FROM products WHERE id = %s AND seller_email = %s", (product_id, session['user_email']))
-    product = cursor.fetchone()
-    
-    if not product:
+    try:
+        conn = get_db()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute("SELECT * FROM products WHERE id = %s", (product_id,))
+        product = cursor.fetchone()
+        
+        if not product or (product['seller_email'] != session.get('user_email') and not session.get('is_admin')):
+            cursor.close()
+            conn.close()
+            flash("Unauthorized access or product not found!", "danger")
+            return redirect(url_for('home'))
+            
+        if request.method == 'POST':
+            title = request.form.get('title')
+            category = request.form.get('category') or product['category']
+            price_raw = request.form.get('price', product['price'])
+            offer_price_raw = request.form.get('offer_price', '0')
+            used_time = request.form.get('used_time')
+            location = request.form.get('location')
+            description = request.form.get('description')
+            whatsapp = request.form.get('whatsapp')
+            offer_text = request.form.get('offer_text', '').strip()
+            free_delivery = True if request.form.get('free_delivery') in ['true', 'on', '1'] else False
+            
+            try:
+                price = int(price_raw)
+            except ValueError:
+                price = product['price']
+
+            try:
+                offer_price = int(offer_price_raw) if offer_price_raw else 0
+            except ValueError:
+                offer_price = 0
+
+            # মূল কভার ফটো আপডেট লজিক (যদি নতুন ছবি দেওয়া হয়)
+            photo_url = product['photo_url']
+            file = request.files.get('product_photo')
+            if file and file.filename != '':
+                try:
+                    img_stream = file.read()
+                    base64_image = base64.b64encode(img_stream).decode('utf-8')
+                    payload = {'key': IMGBB_API_KEY, 'image': base64_image}
+                    r = requests.post('https://api.imgbb.com/1/upload', data=payload)
+                    res_data = r.json()
+                    if res_data.get('success'):
+                        photo_url = res_data['data']['url']
+                except Exception as e:
+                    print(f"Update Main Image Error: {str(e)}")
+
+            # ডাটাবেজে সম্পূর্ণ নতুন আপডেট সাবমিশন
+            cursor.execute('''
+                UPDATE products 
+                SET title=%s, category=%s, price=%s, offer_price=%s, used_time=%s, location=%s, description=%s, whatsapp=%s, photo_url=%s, status='Pending', offer_text=%s, free_delivery=%s
+                WHERE id=%s
+            ''', (title, category, price, offer_price, used_time, location, description, whatsapp, photo_url, offer_text, free_delivery, product_id))
+            
+            # অতিরিক্ত নতুন ছবি যদি আপলোড করা হয়
+            additional_files = request.files.getlist('additional_photos')
+            for add_file in additional_files:
+                if add_file and add_file.filename != '':
+                    try:
+                        add_img_stream = add_file.read()
+                        add_base64 = base64.b64encode(add_img_stream).decode('utf-8')
+                        add_payload = {'key': IMGBB_API_KEY, 'image': add_base64}
+                        add_response = requests.post('https://api.imgbb.com/1/upload', data=add_payload)
+                        add_res_data = add_response.json()
+                        
+                        if add_response.status_code == 200 and add_res_data.get('success'):
+                            add_photo_url = add_res_data['data']['url']
+                            cursor.execute('''
+                                INSERT INTO product_images (product_id, image_url) VALUES (%s, %s)
+                            ''', (product_id, add_photo_url))
+                    except Exception as e:
+                        print(f"⚠️ Secondary Image Upload Error: {str(e)}")
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            flash("✅ Product updated! It was submitted for admin re-approval.", "success")
+            return redirect(url_for('user_profile', email=session['user_email']))
+            
+        cursor.execute("SELECT name FROM dynamic_categories ORDER BY name ASC")
+        live_categories = [row['name'] for row in cursor.fetchall()]
         cursor.close()
         conn.close()
-        flash("Unauthorized or Product not found!", "danger")
+        
+        return render_template('edit_product.html', product=dict(product), live_categories=live_categories)
+    except Exception as e:
+        flash(f"Error editing product: {str(e)}", "danger")
         return redirect(url_for('home'))
-        
-    if request.method == 'POST':
-        title = request.form.get('title')
-        category = request.form.get('category')  
-        price = request.form.get('price')
-        offer_price_raw = request.form.get('offer_price', '0')
-        used_time = request.form.get('used_time')
-        location = request.form.get('location')
-        description = request.form.get('description')
-        whatsapp = request.form.get('whatsapp')
-
-        offer_text = request.form.get('offer_text', '').strip()
-        free_delivery = True if request.form.get('free_delivery') == 'true' else False
-        
-        try:
-            offer_price = int(offer_price_raw) if offer_price_raw else 0
-        except ValueError:
-            offer_price = 0
-
-        if not category or category.strip() == "":
-            category = product['category'] 
-        
-        cursor.execute('''
-            UPDATE products 
-            SET title=%s, category=%s, price=%s, offer_price=%s, used_time=%s, location=%s, description=%s, whatsapp=%s, offer_text=%s, free_delivery=%s, status='Pending'
-            WHERE id=%s
-        ''', (title, category, price, offer_price, used_time, location, description, whatsapp, offer_text, free_delivery, product_id))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        flash("Product updated successfully! Awaiting Admin re-verification.", "success")
-        return redirect(url_for('user_profile', email=session['user_email']))
-        
-    cursor.execute("SELECT name FROM dynamic_categories ORDER BY name ASC")
-    live_categories = [row['name'] for row in cursor.fetchall()]
-    cursor.close()
-    conn.close()
-    
-    return render_template('edit_product.html', product=product, live_categories=live_categories)
 
 @app.route('/delete-product/<int:product_id>', methods=['GET', 'POST'])
 def delete_product(product_id):
-    if 'user_email' not in session:
+    if 'user_email' not in session and not session.get('is_admin'):
+        flash("Please login first!", "danger")
         return redirect(url_for('login'))
+        
     try:
         conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM products WHERE id = %s AND seller_email = %s", (product_id, session['user_email']))
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute("SELECT seller_email FROM products WHERE id = %s", (product_id,))
+        prod = cursor.fetchone()
+        
+        if not prod:
+            cursor.close()
+            conn.close()
+            flash("Product not found!", "danger")
+            return redirect(url_for('home'))
+
+        if prod['seller_email'] != session.get('user_email') and not session.get('is_admin'):
+            cursor.close()
+            conn.close()
+            flash("Unauthorized action!", "danger")
+            return redirect(url_for('home'))
+
         cursor.execute("DELETE FROM wishlist WHERE product_id = %s", (product_id,))
         cursor.execute("DELETE FROM comments WHERE product_id = %s", (product_id,))
         cursor.execute("DELETE FROM product_images WHERE product_id = %s", (product_id,))
+        cursor.execute("DELETE FROM notifications WHERE product_id = %s", (product_id,))
+        cursor.execute("DELETE FROM products WHERE id = %s", (product_id,))
+        
         conn.commit()
         cursor.close()
         conn.close()
-        flash("Product deleted successfully!", "success")
+        
+        flash("🗑️ Product deleted successfully!", "success")
     except Exception as e:
         flash(f"Error deleting product: {str(e)}", "danger")
-    return redirect(url_for('user_profile', email=session['user_email']))
+        
+    return redirect(request.referrer or url_for('home'))
 
 
-# ==================== 👑 BUYER INTERACTION ROUTES ====================
+# ==================== BUYER INTERACTION ====================
 
 @app.route('/connect/<int:product_id>')
 def connect_buyer(product_id):
@@ -1173,7 +1234,7 @@ def my_wishlist():
         return redirect(url_for('home'))
 
 @app.route('/add-comment/<int:product_id>', methods=['POST'])
-@limiter.limit("10 per minute", error_message="You are commenting too fast! Please slow down.")
+@limiter.limit("10 per minute")
 def add_comment(product_id):
     if 'user_email' not in session and not session.get('is_admin'):
         flash("Please login first to ask questions or comment!", "danger")
@@ -1248,7 +1309,7 @@ def logout():
     return redirect(url_for('home'))
 
 
-# ==================== 🛠️ ADMIN PANEL SYSTEM ====================
+# ==================== 🛠️ ADMIN PANEL ====================
 
 @app.route('/diu-secret-gateway-2026', methods=['GET', 'POST'])
 def admin_login():
@@ -1356,7 +1417,6 @@ def view_registered_users():
     except Exception as e:
         return f"Admin Panel Fetch Error: {str(e)}"
 
-# ==================== 📢 OVERWRITE/DELETE ACTIVE NOTICE ROUTE ====================
 @app.route('/admin/send-announcement', methods=['POST'])
 def admin_send_announcement():
     if not session.get('is_admin'):
@@ -1374,7 +1434,6 @@ def admin_send_announcement():
             cursor = conn.cursor()
             
             cursor.execute("DELETE FROM system_announcements")
-            
             cursor.execute("""
                 INSERT INTO system_announcements (text, expiry_time) 
                 VALUES (%s, %s)
@@ -1516,19 +1575,7 @@ def admin_approve_product(product_id):
 def admin_delete_product(product_id):
     if not session.get('is_admin'):
         return "Unauthorized", 403
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM products WHERE id = %s", (product_id,))
-        cursor.execute("DELETE FROM wishlist WHERE product_id = %s", (product_id,))
-        cursor.execute("DELETE FROM comments WHERE product_id = %s", (product_id,))
-        cursor.execute("DELETE FROM product_images WHERE product_id = %s", (product_id,))
-        conn.commit()
-        cursor.close()
-        conn.close()
-    except Exception as e:
-        print(f"⚠️ Delete Product Error: {str(e)}")
-    return redirect(url_for('view_registered_users'))
+    return delete_product(product_id)
 
 @app.route('/admin/logout')
 def admin_logout():
@@ -1536,7 +1583,7 @@ def admin_logout():
     return redirect('/diu-secret-gateway-2026')
 
 
-# ==================== ⚖️ OFFICIAL PLATFORM COMPLIANCE PATHS ====================
+# ==================== ⚖️ OFFICIAL PLATFORM PATHS ====================
 
 @app.route('/about')
 def about_us():
@@ -1551,7 +1598,7 @@ def terms_of_service():
     return render_template('terms.html')
 
 
-# ==================== 🔔 CLEAR NOTIFICATION API ROUTE ====================
+# ==================== CLEAR NOTIFICATION API ====================
 
 @app.route('/api/notifications/clear', methods=['POST'])
 def clear_all_notifications():
@@ -1562,9 +1609,7 @@ def clear_all_notifications():
     try:
         conn = get_db()
         cursor = conn.cursor()
-        
         cursor.execute('DELETE FROM notifications WHERE user_email = %s', (user_email,))
-        
         conn.commit()
         cursor.close()
         conn.close()
