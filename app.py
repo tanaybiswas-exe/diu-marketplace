@@ -183,7 +183,6 @@ def init_db():
             )
         ''')
 
-        # 🎁 products টেবিলে offer_price, offer_text ও free_delivery কলাম
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS products (
                 id SERIAL PRIMARY KEY,
@@ -203,7 +202,6 @@ def init_db():
             )
         ''')
 
-        # নিশ্চিত করা যদি প্রভিওস ডেটাবেজ স্কিমায় কলাম না থাকে তবে যেন অলটার হয়ে যায়
         cursor.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS offer_price INT DEFAULT 0;")
         cursor.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS offer_text VARCHAR(255);")
         cursor.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS free_delivery BOOLEAN DEFAULT FALSE;")
@@ -788,8 +786,12 @@ def user_profile(email):
 
             cursor.close()
             conn.close()
+            
+            # 🔥 HTML টেমপ্লেটের নাম চেক করে render_template ঠিক করা হলো
+            template_name = 'profile.html' if os.path.exists(os.path.join(template_dir, 'profile.html')) else 'user_profile.html'
+            
             return render_template(
-                'user_profile.html', 
+                template_name, 
                 profile_user=profile_user_dict, 
                 user=profile_user_dict, 
                 current_user=logged_in_user, 
@@ -849,6 +851,26 @@ def update_profile_pic():
     return redirect(url_for('user_profile', email=session['user_email']))
 
 
+# ==================== ❌ DELETE PROFILE PICTURE ROUTE ====================
+@app.route('/delete_profile_pic', methods=['POST'])
+def delete_profile_pic():
+    if 'user_email' not in session:
+        return redirect(url_for('login'))
+        
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET profile_pic = 'default_avatar.png' WHERE email = %s", (session['user_email'],))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        flash('Profile picture removed successfully!', 'success')
+    except Exception as e:
+        flash(f'Error removing picture: {str(e)}', 'danger')
+        
+    return redirect(url_for('user_profile', email=session['user_email']))
+
+
 @app.route('/add-product', methods=['GET', 'POST'])
 def add_product():
     if 'user_email' not in session:
@@ -863,13 +885,12 @@ def add_product():
         title = request.form.get('title')
         category = request.form.get('category')
         price_raw = request.form.get('price', '0')
-        offer_price_raw = request.form.get('offer_price', '0')  # 🆕 অফার প্রাইস ইনপুট
+        offer_price_raw = request.form.get('offer_price', '0')
         used_time = request.form.get('used_time')
         location = request.form.get('location')
         description = request.form.get('description')
         whatsapp = request.form.get('whatsapp')
 
-        # 🎁 অপশনাল নতুন ফিল্ড
         offer_text = request.form.get('offer_text', '').strip()
         free_delivery = True if request.form.get('free_delivery') == 'true' else False
 
@@ -902,7 +923,6 @@ def add_product():
             conn = get_db()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-            # 🆕 offer_price সহ ডাটাবেজে ইনসার্ট
             cursor.execute('''
                 INSERT INTO products (title, category, price, offer_price, used_time, location, description, whatsapp, photo_url, seller_email, status, offer_text, free_delivery)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Pending', %s, %s) RETURNING id
@@ -1003,7 +1023,7 @@ def edit_product(product_id):
         title = request.form.get('title')
         category = request.form.get('category')  
         price = request.form.get('price')
-        offer_price_raw = request.form.get('offer_price', '0')  # 🆕 অফার প্রাইস ইনপুট
+        offer_price_raw = request.form.get('offer_price', '0')
         used_time = request.form.get('used_time')
         location = request.form.get('location')
         description = request.form.get('description')
@@ -1020,7 +1040,6 @@ def edit_product(product_id):
         if not category or category.strip() == "":
             category = product['category'] 
         
-        # 🆕 offer_price আপডেট
         cursor.execute('''
             UPDATE products 
             SET title=%s, category=%s, price=%s, offer_price=%s, used_time=%s, location=%s, description=%s, whatsapp=%s, offer_text=%s, free_delivery=%s, status='Pending'
