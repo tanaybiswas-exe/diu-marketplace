@@ -237,19 +237,19 @@
         /* 📱 MOBILE RESPONSIVE OPTIMIZATIONS (2 COLUMNS) */
         @media (max-width: 767.98px) {
             .zoom-wrapper {
-                height: 140px; /* মোবাইলে ছবির হাইট কিছুটা কম যাতে গ্রিড পারফেক্ট দেখায় */
+                height: 140px;
             }
             .product-card .card-body {
-                padding: 10px; /* মোবাইলে ভেতরের প্যাডিং মানানসই করা */
+                padding: 10px;
             }
             .product-title-custom {
-                font-size: 0.9rem !important; /* প্রোডাক্টের শিরোনাম ফন্ট সাইজ */
+                font-size: 0.9rem !important;
             }
             .product-price-custom {
-                font-size: 1rem !important; /* প্রাইস ফন্ট সাইজ */
+                font-size: 1rem !important;
             }
             .product-btn-text {
-                font-size: 0.75rem !important; /* বাটন টেক্সট */
+                font-size: 0.75rem !important;
                 padding: 4px 8px !important;
             }
         }
@@ -356,7 +356,7 @@
 
         <h3 class="fw-bold mb-4 text-dark fs-4 fs-md-3">{% if is_wishlist_page %}❤️ My Saved Wishlist{% else %}📢 Live Campus Market Feed{% endif %}</h3>
         
-        <!-- 🚀 2 COLUMNS IN MOBILE GRID CONFIGURATION HERE -->
+        <!-- 🚀 2 COLUMNS IN MOBILE GRID CONFIGURATION -->
         <div class="row row-cols-2 row-cols-md-3 row-cols-lg-3 g-2 g-md-4">
             {% if not products %}
                 <div class="col-12 text-center my-5 py-5">
@@ -367,6 +367,8 @@
             {% for product in products %}
             <div class="col" id="product-{{ product.id }}">
                 <div class="card h-100 product-card shadow-sm border-0">
+                    
+                    <!-- 🏷️ STATUS BADGE -->
                     {% if product.status == 'Sold Out' %}
                         <span class="badge bg-danger position-absolute top-0 end-0 m-2 z-3" style="font-size: 10px;"><i class="fas fa-times-circle"></i> Sold Out</span>
                     {% elif product.status == 'Pending' %}
@@ -375,21 +377,47 @@
                         <span class="badge bg-success position-absolute top-0 end-0 m-2 z-3" style="font-size: 10px;"><i class="fas fa-check-circle"></i> In Stock</span>
                     {% endif %}
 
+                    <!-- 🎁 SPECIAL OFFER BADGE (IF SELLER SETS IT) -->
+                    {% if product.offer_text %}
+                        <span class="badge bg-warning text-dark position-absolute top-0 start-0 m-2 z-3 shadow-sm fw-bold" style="font-size: 10px;">
+                            <i class="fas fa-fire me-1 text-danger"></i>{{ product.offer_text }}
+                        </span>
+                    {% endif %}
+
                     <div class="zoom-wrapper">
                         <img src="{{ product.photo_url | default('https://placehold.co/600x400', true) }}" alt="{{ product.title }}" loading="lazy" onclick="openZoomImage('{{ product.photo_url | default('https://placehold.co/600x400', true) }}')">
                         <button class="btn-quick-zoom" onclick="openZoomImage('{{ product.photo_url | default('https://placehold.co/600x400', true) }}')" title="Click to zoom image">
                             <i class="fas fa-search-plus"></i>
                         </button>
                     </div>
+
                     <div class="card-body d-flex flex-column">
-                        <span class="badge bg-secondary align-self-start mb-2" style="font-size: 10px;">{{ product.category }}</span>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge bg-secondary" style="font-size: 10px;">{{ product.category }}</span>
+                            
+                            <!-- 🚚 FREE DELIVERY TAG -->
+                            {% if product.free_delivery %}
+                                <span class="badge bg-info text-dark" style="font-size: 9px;" title="Free Campus Delivery Available">
+                                    <i class="fas fa-truck"></i> Free Delivery
+                                </span>
+                            {% endif %}
+                        </div>
                         
                         <h5 class="card-title fw-bold text-dark text-truncate product-title-custom mb-1">
                             {{ product.title }}
                         </h5>
                         
-                        <p class="text-success fw-bold fs-5 mb-1 product-price-custom">৳{{ product.price }}</p>
-                        <small class="text-muted mb-3 d-block text-truncate" style="font-size: 11px;"><i class="fas fa-map-marker-alt text-secondary"></i> {{ product.location }}</small>
+                        <!-- 💰 PRICE DISPLAY SYSTEM (DISCOUNT + STRIKETHROUGH REGULAR PRICE) -->
+                        <div class="mb-1 product-price-custom">
+                            {% if product.offer_price %}
+                                <span class="text-danger fw-bold fs-5">৳{{ product.offer_price }}</span>
+                                <span class="text-muted text-decoration-line-through small ms-1">৳{{ product.price }}</span>
+                            {% else %}
+                                <span class="text-success fw-bold fs-5">৳{{ product.price }}</span>
+                            {% endif %}
+                        </div>
+
+                        <small class="text-muted mb-2 d-block text-truncate" style="font-size: 11px;"><i class="fas fa-map-marker-alt text-secondary"></i> {{ product.location }}</small>
                         
                         <div class="mt-auto d-flex justify-content-between align-items-center gap-1">
                             <a href="/product-details?id={{ product.id }}" class="btn btn-outline-primary btn-sm flex-grow-1 rounded-pill product-btn-text">
