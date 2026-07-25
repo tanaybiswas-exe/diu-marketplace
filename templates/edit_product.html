@@ -25,12 +25,22 @@
                                 <input type="number" name="price" class="form-control" value="{{ product.price }}" required>
                             </div>
                             <div class="col">
-                                <label class="form-label fw-bold">Status</label>
-                                <select name="status" class="form-select" disabled>
-                                    <option value="Pending" selected>Pending (Requires Approval)</option>
-                                </select>
-                                <small class="text-muted d-block mt-1">Editing resets status to pending.</small>
+                                <label class="form-label fw-bold">Offer Price (৳)</label>
+                                <input type="number" name="offer_price" class="form-control" value="{{ product.offer_price if product.offer_price else '' }}" placeholder="Optional">
                             </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Offer Badge Text</label>
+                            <input type="text" name="offer_text" class="form-control" value="{{ product.offer_text if product.offer_text else '' }}" placeholder="e.g. 20% OFF">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Status</label>
+                            <select name="status" class="form-select" disabled>
+                                <option value="Pending" selected>Pending (Requires Approval)</option>
+                            </select>
+                            <small class="text-muted d-block mt-1">Editing resets status to pending.</small>
                         </div>
                         
                         <div class="mb-3">
