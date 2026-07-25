@@ -183,21 +183,30 @@ def init_db():
             )
         ''')
 
+        # 🎁 products টেবিলে offer_price, offer_text ও free_delivery কলাম
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS products (
                 id SERIAL PRIMARY KEY,
                 title VARCHAR(255) NOT NULL,
                 category VARCHAR(255) NOT NULL,
                 price INT NOT NULL,
+                offer_price INT DEFAULT 0,
                 used_time VARCHAR(255),
                 location VARCHAR(255),
                 description TEXT,
                 whatsapp VARCHAR(50),
                 photo_url VARCHAR(512),
                 seller_email VARCHAR(255) NOT NULL,
-                status VARCHAR(50) DEFAULT 'Pending'
+                status VARCHAR(50) DEFAULT 'Pending',
+                offer_text VARCHAR(255),
+                free_delivery BOOLEAN DEFAULT FALSE
             )
         ''')
+
+        # নিশ্চিত করা যদি প্রভিওস ডেটাবেজ স্কিমায় কলাম না থাকে তবে যেন অলটার হয়ে যায়
+        cursor.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS offer_price INT DEFAULT 0;")
+        cursor.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS offer_text VARCHAR(255);")
+        cursor.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS free_delivery BOOLEAN DEFAULT FALSE;")
 
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS product_images (
@@ -854,15 +863,25 @@ def add_product():
         title = request.form.get('title')
         category = request.form.get('category')
         price_raw = request.form.get('price', '0')
+        offer_price_raw = request.form.get('offer_price', '0')  # 🆕 অফার প্রাইস ইনপুট
         used_time = request.form.get('used_time')
         location = request.form.get('location')
         description = request.form.get('description')
         whatsapp = request.form.get('whatsapp')
 
+        # 🎁 অপশনাল নতুন ফিল্ড
+        offer_text = request.form.get('offer_text', '').strip()
+        free_delivery = True if request.form.get('free_delivery') == 'true' else False
+
         try:
             price = int(price_raw)
         except ValueError:
             price = 0
+
+        try:
+            offer_price = int(offer_price_raw) if offer_price_raw else 0
+        except ValueError:
+            offer_price = 0
 
         file = request.files.get('product_photo')
         photo_url = "https://placehold.co/600x400?text=No+Image"
@@ -883,10 +902,11 @@ def add_product():
             conn = get_db()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
 
+            # 🆕 offer_price সহ ডাটাবেজে ইনসার্ট
             cursor.execute('''
-                INSERT INTO products (title, category, price, used_time, location, description, whatsapp, photo_url, seller_email, status)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'Pending') RETURNING id
-            ''', (title, category, price, used_time, location, description, whatsapp, photo_url, session['user_email']))
+                INSERT INTO products (title, category, price, offer_price, used_time, location, description, whatsapp, photo_url, seller_email, status, offer_text, free_delivery)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Pending', %s, %s) RETURNING id
+            ''', (title, category, price, offer_price, used_time, location, description, whatsapp, photo_url, session['user_email'], offer_text, free_delivery))
             
             new_product_id = cursor.fetchone()['id']
             conn.commit()
@@ -983,19 +1003,29 @@ def edit_product(product_id):
         title = request.form.get('title')
         category = request.form.get('category')  
         price = request.form.get('price')
+        offer_price_raw = request.form.get('offer_price', '0')  # 🆕 অফার প্রাইস ইনপুট
         used_time = request.form.get('used_time')
         location = request.form.get('location')
         description = request.form.get('description')
         whatsapp = request.form.get('whatsapp')
+
+        offer_text = request.form.get('offer_text', '').strip()
+        free_delivery = True if request.form.get('free_delivery') == 'true' else False
         
+        try:
+            offer_price = int(offer_price_raw) if offer_price_raw else 0
+        except ValueError:
+            offer_price = 0
+
         if not category or category.strip() == "":
             category = product['category'] 
         
+        # 🆕 offer_price আপডেট
         cursor.execute('''
             UPDATE products 
-            SET title=%s, category=%s, price=%s, used_time=%s, location=%s, description=%s, whatsapp=%s, status='Pending'
+            SET title=%s, category=%s, price=%s, offer_price=%s, used_time=%s, location=%s, description=%s, whatsapp=%s, offer_text=%s, free_delivery=%s, status='Pending'
             WHERE id=%s
-        ''', (title, category, price, used_time, location, description, whatsapp, product_id))
+        ''', (title, category, price, offer_price, used_time, location, description, whatsapp, offer_text, free_delivery, product_id))
         conn.commit()
         cursor.close()
         conn.close()
