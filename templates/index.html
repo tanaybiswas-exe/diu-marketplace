@@ -73,7 +73,7 @@
             position: relative;
             overflow: hidden;
             width: 100%;
-            height: 250px;
+            height: 200px;
             background-color: #f8f9fa;
             border-radius: 8px 8px 0 0;
             cursor: pointer;
@@ -91,18 +91,18 @@
 
         .btn-quick-zoom {
             position: absolute;
-            bottom: 10px;
-            right: 10px;
+            bottom: 8px;
+            right: 8px;
             background: rgba(15, 23, 42, 0.85);
             color: #38bdf8;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 15px;
+            font-size: 13px;
             backdrop-filter: blur(4px);
             transition: all 0.2s ease;
             z-index: 5;
@@ -233,6 +233,26 @@
             text-decoration: underline !important;
             transition: 0.2s ease-in-out;
         }
+
+        /* 📱 MOBILE RESPONSIVE OPTIMIZATIONS (2 COLUMNS) */
+        @media (max-width: 767.98px) {
+            .zoom-wrapper {
+                height: 140px; /* মোবাইলে ছবির হাইট কিছুটা কম যাতে গ্রিড পারফেক্ট দেখায় */
+            }
+            .product-card .card-body {
+                padding: 10px; /* মোবাইলে ভেতরের প্যাডিং মানানসই করা */
+            }
+            .product-title-custom {
+                font-size: 0.9rem !important; /* প্রোডাক্টের শিরোনাম ফন্ট সাইজ */
+            }
+            .product-price-custom {
+                font-size: 1rem !important; /* প্রাইস ফন্ট সাইজ */
+            }
+            .product-btn-text {
+                font-size: 0.75rem !important; /* বাটন টেক্সট */
+                padding: 4px 8px !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-light min-vh-100 d-flex flex-column">
@@ -310,7 +330,7 @@
     </div>
     {% endif %}
 
-    <main class="container my-5 flex-grow-1">
+    <main class="container my-4 my-md-5 flex-grow-1">
         <div class="row mb-4">
             <div class="col-md-8 mx-auto">
                 <form action="{{ url_for('home') }}" method="GET" class="input-group shadow-sm">
@@ -329,14 +349,15 @@
                             <option value="Others" {% if request.args.get('category') == 'Others' %}selected{% endif %}>Others</option>
                         {% endif %}
                     </select>
-                    <button class="btn btn-primary px-4" type="submit"><i class="fas fa-search"></i> Search</button>
+                    <button class="btn btn-primary px-3 px-md-4" type="submit"><i class="fas fa-search"></i> <span class="d-none d-sm-inline">Search</span></button>
                 </form>
             </div>
         </div>
 
-        <h3 class="fw-bold mb-4 text-dark">{% if is_wishlist_page %}❤️ My Saved Wishlist{% else %}📢 Live Campus Market Feed{% endif %}</h3>
+        <h3 class="fw-bold mb-4 text-dark fs-4 fs-md-3">{% if is_wishlist_page %}❤️ My Saved Wishlist{% else %}📢 Live Campus Market Feed{% endif %}</h3>
         
-        <div class="row g-4">
+        <!-- 🚀 2 COLUMNS IN MOBILE GRID CONFIGURATION HERE -->
+        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-3 g-2 g-md-4">
             {% if not products %}
                 <div class="col-12 text-center my-5 py-5">
                     <p class="text-muted fs-4">No products listed yet!</p>
@@ -344,14 +365,14 @@
             {% endif %}
 
             {% for product in products %}
-            <div class="col-lg-4 col-md-6 col-sm-12" id="product-{{ product.id }}">
+            <div class="col" id="product-{{ product.id }}">
                 <div class="card h-100 product-card shadow-sm border-0">
                     {% if product.status == 'Sold Out' %}
-                        <span class="badge bg-danger position-absolute top-0 end-0 m-2 z-3" style="font-size: 11px;"><i class="fas fa-times-circle"></i> Sold Out</span>
+                        <span class="badge bg-danger position-absolute top-0 end-0 m-2 z-3" style="font-size: 10px;"><i class="fas fa-times-circle"></i> Sold Out</span>
                     {% elif product.status == 'Pending' %}
-                        <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2 z-3" style="font-size: 11px;"><i class="fas fa-clock"></i> Pending</span>
+                        <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2 z-3" style="font-size: 10px;"><i class="fas fa-clock"></i> Pending</span>
                     {% else %}
-                        <span class="badge bg-success position-absolute top-0 end-0 m-2 z-3" style="font-size: 11px;"><i class="fas fa-check-circle"></i> In Stock</span>
+                        <span class="badge bg-success position-absolute top-0 end-0 m-2 z-3" style="font-size: 10px;"><i class="fas fa-check-circle"></i> In Stock</span>
                     {% endif %}
 
                     <div class="zoom-wrapper">
@@ -361,29 +382,28 @@
                         </button>
                     </div>
                     <div class="card-body d-flex flex-column">
-                        <span class="badge bg-secondary align-self-start mb-2">{{ product.category }}</span>
+                        <span class="badge bg-secondary align-self-start mb-2" style="font-size: 10px;">{{ product.category }}</span>
                         
-                        <h5 class="card-title fw-bold text-dark text-truncate">
+                        <h5 class="card-title fw-bold text-dark text-truncate product-title-custom mb-1">
                             {{ product.title }}
                         </h5>
                         
-                        <p class="text-success fw-bold fs-5 mb-1">৳{{ product.price }}</p>
-                        <small class="text-muted mb-3 d-block"><i class="fas fa-map-marker-alt text-secondary"></i> {{ product.location }}</small>
+                        <p class="text-success fw-bold fs-5 mb-1 product-price-custom">৳{{ product.price }}</p>
+                        <small class="text-muted mb-3 d-block text-truncate" style="font-size: 11px;"><i class="fas fa-map-marker-alt text-secondary"></i> {{ product.location }}</small>
                         
-                        <div class="mt-auto d-flex justify-content-between align-items-center gap-2">
-                            <!-- 🚀 [আপডেট]: Modal বাদ দিয়ে সরাসরি dynamic product-details page redirection -->
-                            <a href="/product-details?id={{ product.id }}" class="btn btn-outline-primary btn-sm flex-grow-1 rounded-pill">
-                                <i class="fas fa-eye"></i> View Details
+                        <div class="mt-auto d-flex justify-content-between align-items-center gap-1">
+                            <a href="/product-details?id={{ product.id }}" class="btn btn-outline-primary btn-sm flex-grow-1 rounded-pill product-btn-text">
+                                <i class="fas fa-eye me-1"></i>Details
                             </a>
-                            <button onclick="toggleWishlist(this, '{{ product.id }}')" class="btn btn-sm rounded-circle {% if product.is_fav %}btn-danger{% else %}btn-outline-danger{% endif %}" aria-label="Add to wishlist">
+                            <button onclick="toggleWishlist(this, '{{ product.id }}')" class="btn btn-sm rounded-circle p-1 px-2 {% if product.is_fav %}btn-danger{% else %}btn-outline-danger{% endif %}" aria-label="Add to wishlist">
                                 <i class="{% if product.is_fav %}fas{% else %}far{% endif %} fa-heart"></i>
                             </button>
                         </div>
 
                         {% if user and user.role == 'admin' and product.status == 'Pending' %}
                             <div class="mt-2 pt-2 border-top">
-                                <a href="{{ url_for('admin_approve_product', product_id=product.id) }}" class="btn btn-success btn-sm w-100 fw-bold rounded-pill">
-                                    <i class="fas fa-check-circle"></i> Accept / Approve Post
+                                <a href="{{ url_for('admin_approve_product', product_id=product.id) }}" class="btn btn-success btn-sm w-100 fw-bold rounded-pill product-btn-text">
+                                    <i class="fas fa-check-circle me-1"></i>Approve
                                 </a>
                             </div>
                         {% endif %}
@@ -516,7 +536,6 @@
                 }
             };
 
-            // 🚀 [আপডেট]: Notification-এ ক্লিক করলে dynamic details page redirection
             window.handleNotificationClick = function(event, notifId, productId) {
                 event.preventDefault();
                 fetch(`/click-notification/${notifId}/${productId}`)
