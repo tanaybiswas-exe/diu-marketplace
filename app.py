@@ -962,7 +962,7 @@ def add_product():
 
     return render_template('add_product.html', live_categories=live_categories)
 
-# ==================== 🔄 SELLER PRODUCT MANAGEMENT (FIXED & COMPLETE) ====================
+# ==================== 🔄 SELLER PRODUCT MANAGEMENT ====================
 
 @app.route('/mark-sold/<int:product_id>')
 def mark_sold(product_id):
@@ -996,7 +996,6 @@ def mark_available(product_id):
         pass
     return redirect(url_for('user_profile', email=session['user_email']))
 
-# এডিট প্রোডাক্ট রুট (উভয় ইউআরএল ফর্মে ফিক্সড)
 @app.route('/edit-product/<int:product_id>', methods=['GET', 'POST'])
 @app.route('/edit_product/<int:product_id>', methods=['GET', 'POST'])
 def edit_product(product_id):
@@ -1039,7 +1038,6 @@ def edit_product(product_id):
             except ValueError:
                 offer_price = 0
 
-            # মূল কভার ফটো আপডেট লজিক (যদি নতুন ছবি দেওয়া হয়)
             photo_url = product['photo_url']
             file = request.files.get('product_photo')
             if file and file.filename != '':
@@ -1054,14 +1052,12 @@ def edit_product(product_id):
                 except Exception as e:
                     print(f"Update Main Image Error: {str(e)}")
 
-            # ডাটাবেজে সম্পূর্ণ নতুন আপডেট সাবমিশন
             cursor.execute('''
                 UPDATE products 
                 SET title=%s, category=%s, price=%s, offer_price=%s, used_time=%s, location=%s, description=%s, whatsapp=%s, photo_url=%s, status='Pending', offer_text=%s, free_delivery=%s
                 WHERE id=%s
             ''', (title, category, price, offer_price, used_time, location, description, whatsapp, photo_url, offer_text, free_delivery, product_id))
             
-            # অতিরিক্ত নতুন ছবি যদি আপলোড করা হয়
             additional_files = request.files.getlist('additional_photos')
             for add_file in additional_files:
                 if add_file and add_file.filename != '':
@@ -1342,6 +1338,7 @@ def admin_login():
         flash("Access Denied! Incorrect Admin Credentials.", "danger")
     return render_template('admin_login.html')
 
+# 🟢 UPDATE: Sellers & Buyers আলাদা ফিল্টার সহ এডমিন ইউজার রুট
 @app.route('/admin/users')
 def view_registered_users():
     if not session.get('is_admin'):
@@ -1370,7 +1367,14 @@ def view_registered_users():
             "pending_products_count": pending_products_count
         }
 
-        cursor.execute("SELECT * FROM users")
+        # 🔹 Sellers এবং Buyers আলাদাভাবে কুয়েরি করা হলো
+        cursor.execute("SELECT * FROM users WHERE role = 'seller' ORDER BY name ASC")
+        all_sellers = [dict(u) for u in cursor.fetchall()]
+
+        cursor.execute("SELECT * FROM users WHERE role = 'buyer' ORDER BY name ASC")
+        all_buyers = [dict(u) for u in cursor.fetchall()]
+
+        cursor.execute("SELECT * FROM users ORDER BY name ASC")
         all_users = [dict(u) for u in cursor.fetchall()]
         
         cursor.execute("SELECT * FROM products ORDER BY id DESC")
@@ -1405,6 +1409,8 @@ def view_registered_users():
         return render_template(
             'admin_users.html', 
             all_users=all_users, 
+            all_sellers=all_sellers,
+            all_buyers=all_buyers,
             all_products=all_products, 
             stats=stats,
             all_categories=all_categories,
@@ -1416,6 +1422,40 @@ def view_registered_users():
         )
     except Exception as e:
         return f"Admin Panel Fetch Error: {str(e)}"
+
+# 🟢 NEW: Admin DELETE USER Route (Permanent DB Deletion)
+@app.route('/admin/delete-user/<email>')
+def delete_user_by_admin(email):
+    if not session.get('is_admin'):
+        flash("Unauthorized access!", "danger")
+        return redirect(url_for('admin_login'))
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # ১. ইউজারের সমস্ত ছবি মুছে ফেলা (Cascade না থাকলেও নিরাপদ রাখার জন্য)
+        cursor.execute("DELETE FROM product_images WHERE product_id IN (SELECT id FROM products WHERE seller_email = %s)", (email,))
+        
+        # ২. ইউজারের তৈরি সমস্ত প্রডাক্ট ও কমেন্ট মুছে ফেলা
+        cursor.execute("DELETE FROM products WHERE seller_email = %s", (email,))
+        cursor.execute("DELETE FROM comments WHERE user_email = %s", (email,))
+        cursor.execute("DELETE FROM wishlist WHERE user_email = %s", (email,))
+        cursor.execute("DELETE FROM notifications WHERE user_email = %s", (email,))
+        cursor.execute("DELETE FROM otp_verifications WHERE email = %s", (email,))
+        
+        # ৩. ডাটাবেজ থেকে মূল ইউজার স্থায়ীভাবে ডিলিট
+        cursor.execute("DELETE FROM users WHERE email = %s", (email,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        flash(f"User ({email}) and all related data deleted permanently!", "success")
+    except Exception as e:
+        flash(f"Error deleting user: {str(e)}", "danger")
+
+    return redirect(url_for('view_registered_users'))
 
 @app.route('/admin/send-announcement', methods=['POST'])
 def admin_send_announcement():
