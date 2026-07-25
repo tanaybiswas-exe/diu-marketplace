@@ -56,8 +56,8 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">Price (BDT)</label>
-                    <input type="number" name="price" required placeholder="৳ Amount" class="w-full px-4 py-2 border rounded-xl outline-none focus:border-brandBlue text-sm">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Regular Price (BDT)</label>
+                    <input type="number" name="price" required placeholder="৳ আসল দাম" class="w-full px-4 py-2 border rounded-xl outline-none focus:border-brandBlue text-sm">
                 </div>
             </div>
 
@@ -76,6 +76,29 @@
                         <option value="3 No Gate">3 No Gate</option>
                         <option value="Daffodil Tower (Dhanmondi)">Dhanmondi Tower</option>
                     </select>
+                </div>
+            </div>
+
+            <!-- 🎁 SPECIAL OFFER & DISCOUNT PRICE OPTIONS -->
+            <div class="p-4 bg-blue-50/50 border border-blue-100 rounded-xl space-y-3">
+                <h3 class="text-xs font-black text-brandBlue uppercase tracking-wider">🎁 Special Offer / Discount (Optional)</h3>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Offer Price (BDT)</label>
+                        <input type="number" name="offer_price" placeholder="৳ অফার দাম" class="w-full px-4 py-2 border rounded-xl outline-none focus:border-brandBlue text-sm bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Offer Badge Text</label>
+                        <input type="text" name="offer_text" placeholder="e.g. 20% OFF / Deal" class="w-full px-4 py-2 border rounded-xl outline-none focus:border-brandBlue text-sm bg-white">
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2 pt-1">
+                    <input type="checkbox" id="free_delivery" name="free_delivery" value="true" class="w-4 h-4 text-brandBlue border-gray-300 rounded focus:ring-brandBlue cursor-pointer">
+                    <label for="free_delivery" class="text-xs font-bold text-gray-700 cursor-pointer select-none">
+                        🚚 Free Campus Delivery Available
+                    </label>
                 </div>
             </div>
 
@@ -100,7 +123,6 @@
                     <span class="text-[10px] text-gray-400 font-semibold">Max 4 photos</span>
                 </div>
                 <input type="file" id="extra_photos" name="additional_photos" accept="image/*" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer border rounded-xl p-1">
-                <p class="text-[10px] text-gray-400 mt-1 pl-1"></p>
             </div>
 
             <button type="submit" id="submitBtn" class="w-full bg-brandBlue text-white py-3 rounded-xl font-bold hover:bg-brandHover transition shadow-md active:scale-[0.99] mt-4 flex items-center justify-center">
@@ -110,18 +132,17 @@
     </div>
 
     <script>
-    // --- 📸 ক্লায়েন্ট সাইড ২ মেগাবাইট ফাইল সাইজ লক ভ্যালিডেশন ---
     document.getElementById('main_photo').addEventListener('change', function() {
-        if (this.files[0] && this.files[0].size > 2 * 1024 * 1024) {
-            alert('❌ Main cover photo size exceeds 2MB limit! Please upload a smaller image.');
+        if (this.files[0] && this.files[0].size > 6 * 1024 * 1024) {
+            alert('❌ Main cover photo size exceeds 6MB limit!');
             this.value = ''; 
         }
     });
 
     document.getElementById('extra_photos').addEventListener('change', function() {
         for (let i = 0; i < this.files.length; i++) {
-            if (this.files[i].size > 2 * 1024 * 1024) {
-                alert(`❌ Additional image "${this.files[i].name}" exceeds 2MB limit!`);
+            if (this.files[i].size > 6 * 1024 * 1024) {
+                alert(`❌ Image "${this.files[i].name}" exceeds 6MB limit!`);
                 this.value = ''; 
                 break;
             }
@@ -137,10 +158,7 @@
         
         submitBtn.disabled = true;
         submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
-        btnText.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg> Uploading & Publishing...`;
+        btnText.innerHTML = `Uploading & Publishing...`;
 
         async function compressImage(file) {
             return new Promise((resolve) => {
@@ -166,16 +184,20 @@
                         
                         canvas.toBlob((blob) => {
                             resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-                        }, 'image/jpeg', 0.7); 
+                        }, 'image/jpeg', 0.75); 
                     };
                 };
             });
         }
 
         const formData = new FormData();
-        
         const inputs = form.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], select, textarea');
         inputs.forEach(input => formData.append(input.name, input.value));
+
+        const freeDeliveryCheck = form.querySelector('input[name="free_delivery"]');
+        if (freeDeliveryCheck && freeDeliveryCheck.checked) {
+            formData.append('free_delivery', 'true');
+        }
 
         const coverInput = form.querySelector('input[name="product_photo"]');
         if (coverInput.files.length > 0) {
