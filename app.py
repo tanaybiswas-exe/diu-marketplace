@@ -10,7 +10,7 @@ import base64
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-# --- 📧 OTP সিস্টেমের জন্য প্রয়োজনীয় নতুন মডিউল ---
+# --- 📧 OTP সিস্টেমের জন্য প্রয়োজনীয় মডিউল ---
 import smtplib
 import random
 from email.mime.text import MIMEText
@@ -32,10 +32,10 @@ app.secret_key = 'diu_marketplace_secure_key_2026'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = False  
 
-# সর্বোচ্চ ২ মেগাবাইট ফাইল সাইজ আপলোড লিমিট (2 * 1024 * 1024 bytes)
+# সর্বোচ্চ ৬ মেগাবাইট ফাইল সাইজ আপলোড লিমিট
 app.config['MAX_CONTENT_LENGTH'] = 6 * 1024 * 1024
 
-# --- 🚀 লিমিটার কনফিগারেশন (মেমরিতে ট্র্যাক রাখবে) ---
+# --- 🚀 লিমিটার কনফিগারেশন ---
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -50,10 +50,10 @@ def add_header(r):
     r.headers["Expires"] = "0"
     return r
 
-# ফাইল সাইজ ২ মেগাবাইটের বেশি হলে এই এরর ট্রিগার হবে
+# ফাইল সাইজ লিমিট এক্সসিড করলে হ্যান্ডলার
 @app.errorhandler(413)
 def request_entity_too_large(error):
-    flash('❌ Upload failed! Total image size cannot be larger than 2MB.', 'danger')
+    flash('❌ Upload failed! Total image size cannot be larger than 6MB.', 'danger')
     return redirect(request.referrer or url_for('home'))
 
 # রেট লিমিট ক্রস করলে ইউজারকে আটকানোর হ্যান্ডলার
@@ -65,7 +65,7 @@ def ratelimit_handler(e):
 # ==================== 🌐 RENDER KEEP-ALIVE ROUTE ====================
 @app.route('/ping')
 def ping():
-    """UptimeRobot বা অন্য ক্রন জব দিয়ে সার্ভার অল-টাইম একটিভ রাখার রাউট"""
+    """UptimeRobot দিয়ে সার্ভার অল-টাইম একটিভ রাখার রাউট"""
     return "Alive", 200
 
 # ==================== 📱 PWA STATIC ROOT SYSTEM PATHS ====================
@@ -123,7 +123,7 @@ def send_otp_email(target_email, otp_code, purpose="Verification"):
         print(f"❌ Email Sending Failed: {str(e)}")
         return False
 
-# ==================== 🖥️ EXPLICIT NEON POSTGRESQL CONFIGURATION ====================
+# ==================== 🖥️ EXPLICIT NEON POSTGRESQL OPTIMIZED CONFIGURATION ====================
 DB_CONFIG = {
     "dbname": "neondb",
     "user": "neondb_owner",
@@ -134,6 +134,7 @@ DB_CONFIG = {
 }
 
 def get_db():
+    """হাই-ট্রাফিক হ্যান্ডেল করার জন্য অপটিমাইজড কানেকশন মেথড"""
     conn = psycopg2.connect(
         dbname=DB_CONFIG["dbname"],
         user=DB_CONFIG["user"],
@@ -141,7 +142,11 @@ def get_db():
         host=DB_CONFIG["host"],
         port=DB_CONFIG["port"],
         sslmode=DB_CONFIG["sslmode"],
-        connect_timeout=15
+        connect_timeout=10,
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=5
     )
     return conn
 
@@ -675,7 +680,7 @@ def home():
         return f"<h1>Database Error inside Home Feed</h1><p>{str(e)}</p>"
 
 
-# ==================== 🛍️ PRODUCT DETAILS ROUTES (FIXED 404 ERRORS) ====================
+# ==================== 🛍️ PRODUCT DETAILS ROUTES ====================
 
 @app.route('/product-details')
 def product_details_query():
@@ -924,7 +929,7 @@ def add_product():
 
     return render_template('add_product.html', live_categories=live_categories)
 
-# ==================== 🔄 SELLER PRODUCT MANAGEMENT (EDIT/DELETE/SOLD) ====================
+# ==================== 🔄 SELLER PRODUCT MANAGEMENT ====================
 
 @app.route('/mark-sold/<int:product_id>')
 def mark_sold(product_id):
@@ -1302,7 +1307,7 @@ def view_registered_users():
     except Exception as e:
         return f"Admin Panel Fetch Error: {str(e)}"
 
-# ==================== 📢 UPDATED: OVERWRITE/DELETE ACTIVE NOTICE ROUTE ====================
+# ==================== 📢 OVERWRITE/DELETE ACTIVE NOTICE ROUTE ====================
 @app.route('/admin/send-announcement', methods=['POST'])
 def admin_send_announcement():
     if not session.get('is_admin'):
