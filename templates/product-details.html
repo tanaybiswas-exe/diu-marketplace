@@ -132,9 +132,22 @@
                             {% endif %}
                         </div>
 
-                        <!-- Title & Price -->
+                        <!-- Title & Price (With Offer Price & Strikethrough) -->
                         <h2 class="fw-bold text-dark mt-2 mb-1">{{ product.title }}</h2>
-                        <h3 class="text-success fw-bold mb-4">৳ {{ product.price }}</h3>
+                        
+                        <div class="mb-4">
+                            {% if product.offer_price %}
+                                <div class="d-flex align-items-baseline gap-2">
+                                    <h3 class="text-danger fw-bold mb-0">৳ {{ product.offer_price }}</h3>
+                                    <h5 class="text-muted text-decoration-line-through mb-0">৳ {{ product.price }}</h5>
+                                    {% if product.offer_text %}
+                                        <span class="badge bg-danger ms-2">{{ product.offer_text }}</span>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <h3 class="text-success fw-bold mb-0">৳ {{ product.price }}</h3>
+                            {% endif %}
+                        </div>
 
                         <hr class="text-muted">
 
