@@ -386,7 +386,7 @@ def place_order(product_id):
     <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 25px; border: 1px solid #e0e0e0;">
         <h2 style="color: #0d6efd; margin-top: 0;">🎉 You Have Received a New Order Request!</h2>
         <p>Hello <b>{product.get('seller_name', 'Seller')}</b>,</p>
-        <p>A buyer has placed an order for your item. Please review and Approve/Confirm or Cancel the order from your dashboard.</p>
+        <p>A buyer has placed an order for your listed product on DIU Smart Marketplace.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         
         <h3 style="color: #333;">📦 Product Details</h3>
