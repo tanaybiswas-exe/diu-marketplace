@@ -6,13 +6,14 @@
     <title>{{ product.title }} - DIU Marketplace</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         body { background-color: #f4f6f9; }
         
         /* Main Image Styling */
         .main-img-container {
             position: relative;
-            cursor: zoom-in; /* মাউস আনলে জুম আইকন দেখাবে */
+            cursor: zoom-in;
             overflow: hidden;
             border-radius: 12px;
             background: #000;
@@ -24,7 +25,7 @@
             transition: transform 0.3s ease;
         }
         .main-img-container:hover .main-img {
-            transform: scale(1.02); /* হালকা হোভার ইফেক্ট */
+            transform: scale(1.02);
         }
         .zoom-badge {
             position: absolute;
@@ -132,7 +133,7 @@
                             {% endif %}
                         </div>
 
-                        <!-- Title & Price (With Offer Price & Strikethrough) -->
+                        <!-- Title & Price -->
                         <h2 class="fw-bold text-dark mt-2 mb-1">{{ product.title }}</h2>
                         
                         <div class="mb-4">
@@ -182,11 +183,24 @@
                         </div>
                     </div>
 
-                    <!-- Action Button -->
-                    <div class="mt-4">
-                        <a href="{{ url_for('connect_buyer', product_id=product.id) }}" target="_blank" class="btn btn-success btn-lg w-100 fw-bold shadow-sm">
-                            <i class="fab fa-whatsapp me-2 fs-5"></i> Contact via WhatsApp
-                        </a>
+                    <!-- Action Buttons -->
+                    <div class="mt-4 row g-2">
+                        <div class="col-12 col-sm-6">
+                            <a href="{{ url_for('connect_buyer', product_id=product.id) }}" target="_blank" class="btn btn-outline-success btn-lg w-100 fw-bold shadow-sm">
+                                <i class="fab fa-whatsapp me-2 fs-5"></i> WhatsApp
+                            </a>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            {% if product.status == 'Available' %}
+                                <button type="button" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#orderModal">
+                                    <i class="bi bi-cart-check-fill me-1"></i> Order Now
+                                </button>
+                            {% else %}
+                                <button class="btn btn-secondary btn-lg w-100 fw-bold shadow-sm" disabled>
+                                    <i class="fas fa-times-circle me-1"></i> Out of Stock
+                                </button>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
 
@@ -224,7 +238,7 @@
         </div>
     </div>
 
-    <!-- 🔍 Image Zoom Modal (Full Screen Viewer) -->
+    <!-- 🔍 Image Zoom Modal -->
     <div class="modal fade" id="imageZoomModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content bg-dark border-0">
@@ -238,12 +252,118 @@
         </div>
     </div>
 
+    <!-- 🛒 Checkout Order Modal -->
+    <div class="modal fade" id="orderModal" tabindex="-1" aria-labelledby="orderModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title fw-bold" id="orderModalLabel"><i class="bi bi-bag-check me-2"></i>Checkout & Place Order</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <form action="{{ url_for('place_order', product_id=product.id) }}" method="POST">
+            <div class="modal-body text-start">
+              
+              <!-- Delivery Zone -->
+              <h6 class="fw-bold border-bottom pb-2 text-secondary"><i class="bi bi-geo-alt me-1"></i> ১. ডেলিভারি এরিয়া সিলেক্ট করুন (Delivery Zone)</h6>
+              <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                  <div class="form-check card p-3 border-success h-100">
+                    <input class="form-check-input" type="radio" name="delivery_zone" id="insideCampus" value="inside_campus" checked onchange="updateDeliveryCharge(0)">
+                    <label class="form-check-label fw-bold" for="insideCampus">
+                      🟢 Inside Campus / Hall Delivery
+                      <span class="d-block text-success small fw-normal">Delivery Charge: ৳0 (ফ্রি)</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-check card p-3 border-primary h-100">
+                    <!-- 🟢 40 এর স্থানে 49 করা হয়েছে -->
+                    <input class="form-check-input" type="radio" name="delivery_zone" id="outsideCampus" value="outside_campus" onchange="updateDeliveryCharge(49)">
+                    <label class="form-check-label fw-bold" for="outsideCampus">
+                      🔵 Outside Campus / Ashulia Area
+                      <!-- 🟢 ৳50 এর স্থানে ৳49 লেখা হয়েছে -->
+                      <span class="d-block text-primary small fw-normal">Delivery Charge: ৳49 </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Buyer Information -->
+              <h6 class="fw-bold border-bottom pb-2 text-secondary"><i class="bi bi-person-lines-fill me-1"></i> ২. ডেলিভারির তথ্য (Delivery Details)</h6>
+              <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                  <label class="form-label small fw-bold">Full Name</label>
+                  <input type="text" class="form-control" name="buyer_name" value="{{ current_user.name if current_user.is_authenticated else '' }}" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small fw-bold">Mobile Number</label>
+                  <input type="tel" class="form-control" name="buyer_phone" value="{{ current_user.mobile if current_user.is_authenticated else '' }}" placeholder="e.g. 017XXXXXXXX" required>
+                </div>
+                <div class="col-12">
+                  <label class="form-label small fw-bold">Exact Location / Drop Point</label>
+                  <input type="text" class="form-control" name="delivery_address" placeholder="যেমন: AB-4 Building, Main Gate, Female Hall, or Specific Mess Address" required>
+                </div>
+                <div class="col-12">
+                  <label class="form-label small fw-bold">Special Note for Seller (Optional)</label>
+                  <input type="text" class="form-control" name="special_note" placeholder='যেমন: "দুপুর ২টার পর ডেলিভারি দিলে ভালো হয়"'>
+                </div>
+              </div>
+
+              <!-- Advance Payment for Delivery Charge Section -->
+              <div id="paymentSection" class="opacity-50" style="pointer-events: none;">
+                <h6 class="fw-bold border-bottom pb-2 text-secondary"><i class="bi bi-wallet2 me-1"></i> ৩. এডভান্স ডেলিভারি চার্জ পেমেন্ট (Advance Delivery Charge)</h6>
+                <div class="alert alert-info small py-2 mb-3">
+                  <i class="bi bi-info-circle me-1"></i> <b>পেমেন্ট নিয়ম:</b> প্রডাক্টের আসল দাম <b>Cash on Delivery</b> তে প্রডাক্ট হাতে পাওয়ার পর সেলারকে দেবেন। শুধুমাত্র ডেলিভারি চার্জ (যদি থাকে) আগে পেমেন্ট করে TrxID ইনপুট দিন।
+                </div>
+                
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold">Payment Method</label>
+                    <select class="form-select" name="payment_method" id="payMethod">
+                      <option value="bkash">bKash Personal</option>
+                      <option value="nagad">Nagad Personal</option>
+                      <option value="rocket">Rocket Personal</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold">Sender Mobile Number</label>
+                    <input type="tel" class="form-control" name="sender_number" id="senderNum" placeholder="017XXXXXXXX">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold">Transaction ID (TrxID)</label>
+                    <input type="text" class="form-control" name="trx_id" id="trxId" placeholder="e.g. 9J7A8K9L">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Price & Charge Summary -->
+              <div class="bg-light p-3 rounded mt-3 d-flex justify-content-between align-items-center border">
+                <div>
+                  <span class="text-muted d-block small">Advance Payable (Delivery Charge):</span>
+                  <span class="h4 text-success fw-bold mb-0" id="deliveryChargeText">৳0 (Free)</span>
+                </div>
+                <div class="text-end">
+                  <span class="text-muted d-block small">Product Price (Cash on Delivery):</span>
+                  <span class="h5 text-dark fw-bold mb-0">৳{{ product.offer_price or product.price }}</span>
+                </div>
+              </div>
+
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" class="btn btn-primary fw-bold"><i class="bi bi-check-circle me-1"></i> Confirm & Place Order</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- Bootstrap JS with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- JavaScript for Image Switching & Zoom Modal -->
+    <!-- Optimized JavaScript -->
     <script>
-        // 1. Thumbnail Change Function
+        // 1. Thumbnail Switcher
         function changeImage(element) {
             document.getElementById('currentImg').src = element.src;
 
@@ -255,13 +375,49 @@
             element.classList.add('active-thumb');
         }
 
-        // 2. Open Zoom Modal Function
+        // 2. Open Zoom Modal (Fixed Memory Leak Issue)
         function openZoomModal() {
             let currentSrc = document.getElementById('currentImg').src;
             document.getElementById('zoomedModalImg').src = currentSrc;
             
-            let zoomModal = new bootstrap.Modal(document.getElementById('imageZoomModal'));
+            let modalElement = document.getElementById('imageZoomModal');
+            let zoomModal = bootstrap.Modal.getInstance(modalElement);
+            
+            if (!zoomModal) {
+                zoomModal = new bootstrap.Modal(modalElement);
+            }
+            
             zoomModal.show();
+        }
+
+        // 3. Dynamic Delivery Charge & Payment Field Toggle
+        function updateDeliveryCharge(amount) {
+            const chargeText = document.getElementById('deliveryChargeText');
+            const paymentSection = document.getElementById('paymentSection');
+            const senderNum = document.getElementById('senderNum');
+            const trxId = document.getElementById('trxId');
+
+            if (amount === 0) {
+                chargeText.innerText = '৳0 (Free)';
+                chargeText.className = 'h4 text-success fw-bold mb-0';
+
+                // Disable payment inputs when charge is 0
+                paymentSection.classList.add('opacity-50');
+                paymentSection.style.pointerEvents = 'none';
+                senderNum.removeAttribute('required');
+                trxId.removeAttribute('required');
+                senderNum.value = '';
+                trxId.value = '';
+            } else {
+                chargeText.innerText = '৳' + amount;
+                chargeText.className = 'h4 text-primary fw-bold mb-0';
+
+                // Enable payment inputs when charge is > 0
+                paymentSection.classList.remove('opacity-50');
+                paymentSection.style.pointerEvents = 'auto';
+                senderNum.setAttribute('required', 'required');
+                trxId.setAttribute('required', 'required');
+            }
         }
     </script>
 
