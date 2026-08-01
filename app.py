@@ -271,13 +271,17 @@ def init_db():
                 sender_number VARCHAR(50) NOT NULL,
                 trx_id VARCHAR(100) NOT NULL,
                 delivery_charge NUMERIC(10, 2) DEFAULT 0.0,
-                order_status VARCHAR(50) DEFAULT 'Pending Verification',
+                order_status VARCHAR(50) DEFAULT 'Pending',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE,
                 FOREIGN KEY (buyer_email) REFERENCES users (email) ON DELETE CASCADE,
                 FOREIGN KEY (seller_email) REFERENCES users (email) ON DELETE CASCADE
             )
         ''')
+        
+        # নিশ্চিত করছি ডাটাবেজের কলাম ডিফোল্ট স্ট্যাটাস 'Pending' থাকবে
+        cursor.execute("ALTER TABLE orders ALTER COLUMN order_status SET DEFAULT 'Pending';")
+        
         conn.commit()
 
         cursor.execute("SELECT * FROM users WHERE email = 'admin@diu.edu.bd'")
@@ -339,24 +343,27 @@ def place_order(product_id):
         sender_number = request.form.get('sender_number')
         trx_id = request.form.get('trx_id')
 
+        # 🎯 STRICT ORDER STATUS FORCE: নিশ্চিতভাবে 'Pending' স্ট্যাটাসে অর্ডার ইনসার্ট হবে
+        initial_order_status = 'Pending'
+
         # অর্ডার ডাটাবেজে ডাটা ঢোকানো
         cursor.execute('''
             INSERT INTO orders (
                 product_id, buyer_email, seller_email, buyer_name, buyer_phone,
                 delivery_zone, delivery_address, special_note, payment_method,
                 sender_number, trx_id, delivery_charge, order_status
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Pending Verification')
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         ''', (
             product['id'], session['user_email'], product['seller_email'], buyer_name, buyer_phone,
             delivery_zone, delivery_address, special_note, payment_method,
-            sender_number, trx_id, delivery_charge
+            sender_number, trx_id, delivery_charge, initial_order_status
         ))
 
         new_order_id = cursor.fetchone()['id']
 
         # নোটিফিকেশন পাঠানো
-        alert_msg = f"📦 New Order Received! Item: '{product['title']}' from {buyer_name}."
+        alert_msg = f"📦 New Order Received! Item: '{product['title']}' from {buyer_name}. Status: Pending"
         cursor.execute('INSERT INTO notifications (product_id, message, user_email) VALUES (%s, %s, %s)', 
                        (product['id'], alert_msg, product['seller_email']))
 
@@ -368,7 +375,7 @@ def place_order(product_id):
         manage_order_url = f"{host_url}/seller/orders"
 
         if product.get('seller_email'):
-            subject = f"📦 New Order Received for {product['title']} - DIU Smart Marketplace"
+            subject = f"📦 New Order Request (#{new_order_id}) - {product['title']} - DIU Marketplace"
             
             email_html = f"""<!DOCTYPE html>
 <html>
@@ -377,9 +384,9 @@ def place_order(product_id):
 </head>
 <body style="font-family: Arial, sans-serif; background-color: #f4f6f9; padding: 20px; margin: 0;">
     <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 25px; border: 1px solid #e0e0e0;">
-        <h2 style="color: #0d6efd; margin-top: 0;">🎉 You Have Received a New Order!</h2>
+        <h2 style="color: #0d6efd; margin-top: 0;">🎉 You Have Received a New Order Request!</h2>
         <p>Hello <b>{product.get('seller_name', 'Seller')}</b>,</p>
-        <p>A buyer has placed an order for your listed product on DIU Smart Marketplace.</p>
+        <p>A buyer has placed an order for your item. Order status is currently <b><span style="color: #ffc107; background: #212529; padding: 3px 8px; border-radius: 4px;">Pending</span></b>. Please review and Approve/Confirm or Cancel the order from your dashboard.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         
         <h3 style="color: #333;">📦 Product Details</h3>
@@ -393,7 +400,7 @@ def place_order(product_id):
         <b>Drop Location:</b> {delivery_address}<br>
         <b>Special Note:</b> {special_note or 'None'}</p>
 
-        <h3 style="color: #333;">💳 Advance Payment Details (Delivery Charge)</h3>
+        <h3 style="color: #333;">💳 Advance Delivery Fee Details</h3>
         <p><b>Payment Method:</b> {payment_method.upper() if payment_method else 'N/A'}<br>
         <b>Sender Number:</b> {sender_number}<br>
         <b>TrxID:</b> <span style="background: #e9ecef; padding: 3px 8px; border-radius: 4px; font-weight: bold;">{trx_id}</span><br>
@@ -401,12 +408,11 @@ def place_order(product_id):
 
         <div style="margin-top: 30px; text-align: center;">
             <a href="{manage_order_url}" target="_blank" style="background-color: #198754; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
-               ✅ Manage & Confirm Order
+               ✅ Manage & Action Order
             </a>
         </div>
         <br>
-        <p style="font-size: 12px; color: #777; text-align: center;">If the button doesn't work, copy and paste this link into your browser:<br>
-        <a href="{manage_order_url}">{manage_order_url}</a></p>
+        <p style="font-size: 12px; color: #777; text-align: center;">You can Approve/Confirm the order or mark it as Delivered once handed over to the buyer.</p>
     </div>
 </body>
 </html>"""
@@ -539,7 +545,7 @@ def update_order_status(order_id):
         return redirect(url_for('login'))
 
     status = request.form.get('status')
-    if status not in ['Approved', 'Confirmed', 'Delivered', 'Cancelled', 'Rejected']:
+    if status not in ['Pending', 'Approved', 'Confirmed', 'Delivered', 'Cancelled', 'Rejected']:
         flash("Invalid status update!", "danger")
         return redirect(url_for('seller_orders'))
 
@@ -565,7 +571,7 @@ def update_order_status(order_id):
 
         cursor.execute("UPDATE orders SET order_status = %s WHERE id = %s", (status, order_id))
         
-        alert_msg = f"🚚 Update on Order #{order_id}: Your order status for '{order['product_title']}' has been updated to '{status}'."
+        alert_msg = f"🚚 Update on Order #{order_id}: Your order status for '{order['product_title']}' has been updated to '{status}' by the seller."
         cursor.execute('INSERT INTO notifications (product_id, message, user_email) VALUES (%s, %s, %s)', 
                        (order['product_id'], alert_msg, order['buyer_email']))
 
@@ -583,7 +589,7 @@ def update_order_status(order_id):
                 <div style="max-width: 550px; margin: 0 auto; background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
                     <h2 style="color: #0d6efd;">DIU Smart Marketplace</h2>
                     <p>Hello <b>{order['buyer_name']}</b>,</p>
-                    <p>Your order status has been updated by system authority.</p>
+                    <p>The status of your order has been updated by the seller.</p>
                     <hr style="border: 0; border-top: 1px solid #eee;">
                     <p><b>Order ID:</b> #{order_id}</p>
                     <p><b>Product:</b> {order['product_title']}</p>
