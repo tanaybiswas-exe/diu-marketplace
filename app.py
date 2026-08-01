@@ -79,8 +79,8 @@ IMGBB_API_KEY = 'd12ec656c77d0cb3c10f66aa908d1627'
 # ==================== 📧 REAL GMAIL SMTP CONFIGURATION ====================
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
-SENDER_EMAIL = "admin094103@gmail.com"        
-SENDER_PASSWORD = "fhfc gmih isil mkpn"      
+SENDER_EMAIL = "diumarketplace@gmail.com"        
+SENDER_PASSWORD = "zgguayxuxlghwkzq"
 
 def send_otp_email(target_email, otp_code, purpose="Verification"):
     try:
@@ -255,6 +255,29 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS orders (
+                id SERIAL PRIMARY KEY,
+                product_id INT NOT NULL,
+                buyer_email VARCHAR(255) NOT NULL,
+                seller_email VARCHAR(255) NOT NULL,
+                buyer_name VARCHAR(255) NOT NULL,
+                buyer_phone VARCHAR(50) NOT NULL,
+                delivery_zone VARCHAR(50) NOT NULL,
+                delivery_address TEXT NOT NULL,
+                special_note TEXT,
+                payment_method VARCHAR(50) NOT NULL,
+                sender_number VARCHAR(50) NOT NULL,
+                trx_id VARCHAR(100) NOT NULL,
+                delivery_charge NUMERIC(10, 2) DEFAULT 0.0,
+                order_status VARCHAR(50) DEFAULT 'Pending Verification',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE,
+                FOREIGN KEY (buyer_email) REFERENCES users (email) ON DELETE CASCADE,
+                FOREIGN KEY (seller_email) REFERENCES users (email) ON DELETE CASCADE
+            )
+        ''')
         conn.commit()
 
         cursor.execute("SELECT * FROM users WHERE email = 'admin@diu.edu.bd'")
@@ -276,6 +299,316 @@ def init_db():
     app._db_inited = True
 
 
+# ==================== 📦 ORDER & DELIVERY ROUTES ====================
+
+@app.route('/place-order/<int:product_id>', methods=['POST'])
+def place_order(product_id):
+    if 'user_email' not in session:
+        flash('Please login first to place an order!', 'danger')
+        return redirect(url_for('login'))
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        cursor.execute("SELECT * FROM products WHERE id = %s", (product_id,))
+        product = cursor.fetchone()
+
+        if not product:
+            cursor.close()
+            conn.close()
+            flash('Product not found!', 'danger')
+            return redirect(url_for('home'))
+
+        cursor.execute("SELECT * FROM users WHERE email = %s", (product['seller_email'],))
+        seller = cursor.fetchone()
+
+        delivery_zone = request.form.get('delivery_zone')
+        delivery_charge = 0.0 if delivery_zone == 'inside_campus' else 49.0
+
+        buyer_name = request.form.get('buyer_name')
+        buyer_phone = request.form.get('buyer_phone')
+        delivery_address = request.form.get('delivery_address')
+        special_note = request.form.get('special_note')
+        payment_method = request.form.get('payment_method')
+        sender_number = request.form.get('sender_number')
+        trx_id = request.form.get('trx_id')
+
+        cursor.execute('''
+            INSERT INTO orders (
+                product_id, buyer_email, seller_email, buyer_name, buyer_phone,
+                delivery_zone, delivery_address, special_note, payment_method,
+                sender_number, trx_id, delivery_charge, order_status
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Pending Verification')
+            RETURNING id
+        ''', (
+            product['id'], session['user_email'], product['seller_email'], buyer_name, buyer_phone,
+            delivery_zone, delivery_address, special_note, payment_method,
+            sender_number, trx_id, delivery_charge
+        ))
+
+        new_order_id = cursor.fetchone()['id']
+
+        alert_msg = f"📦 New Order Received! Item: '{product['title']}' from {buyer_name}."
+        cursor.execute('INSERT INTO notifications (product_id, message, user_email) VALUES (%s, %s, %s)', 
+                       (product['id'], alert_msg, product['seller_email']))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        host_url = request.host_url.rstrip('/')
+        manage_order_url = f"{host_url}/seller/orders"
+
+        if seller and seller.get('email'):
+            subject = f"📦 New Order Received for {product['title']} - DIU Smart Marketplace"
+            
+            email_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f6f9; padding: 20px; margin: 0;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 25px; border: 1px solid #e0e0e0;">
+        <h2 style="color: #0d6efd; margin-top: 0;">🎉 You Have Received a New Order!</h2>
+        <p>Hello <b>{seller.get('name', 'Seller')}</b>,</p>
+        <p>A buyer has placed an order for your listed product on DIU Smart Marketplace.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        
+        <h3 style="color: #333;">📦 Product Details</h3>
+        <p><b>Product:</b> {product['title']}<br>
+        <b>Product Price:</b> ৳{product['price']} (Cash on Delivery)</p>
+
+        <h3 style="color: #333;">👤 Buyer & Delivery Information</h3>
+        <p><b>Name:</b> {buyer_name}<br>
+        <b>Phone:</b> <a href="tel:{buyer_phone}">{buyer_phone}</a><br>
+        <b>Zone:</b> {delivery_zone.replace('_', ' ').title() if delivery_zone else 'N/A'}<br>
+        <b>Drop Location:</b> {delivery_address}<br>
+        <b>Special Note:</b> {special_note or 'None'}</p>
+
+        <h3 style="color: #333;">💳 Advance Payment Details (Delivery Charge)</h3>
+        <p><b>Payment Method:</b> {payment_method.upper() if payment_method else 'N/A'}<br>
+        <b>Sender Number:</b> {sender_number}<br>
+        <b>TrxID:</b> <span style="background: #e9ecef; padding: 3px 8px; border-radius: 4px; font-weight: bold;">{trx_id}</span><br>
+        <b>Amount Paid:</b> ৳{delivery_charge}</p>
+
+        <div style="margin-top: 30px; text-align: center;">
+            <a href="{manage_order_url}" target="_blank" style="background-color: #198754; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
+               ✅ Manage & Confirm Order
+            </a>
+        </div>
+        <br>
+        <p style="font-size: 12px; color: #777; text-align: center;">If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="{manage_order_url}">{manage_order_url}</a></p>
+    </div>
+</body>
+</html>"""
+
+            try:
+                msg = MIMEMultipart('alternative')
+                msg['From'] = SENDER_EMAIL
+                msg['To'] = seller['email']
+                msg['Subject'] = subject
+                msg.attach(MIMEText(email_html, 'html'))
+
+                server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+                server.starttls()
+                server.login(SENDER_EMAIL, SENDER_PASSWORD)
+                server.sendmail(SENDER_EMAIL, seller['email'], msg.as_string())
+                server.quit()
+            except Exception as e:
+                print(f"⚠️ Order Mail Sending Error: {str(e)}")
+
+        flash('Order placed successfully!', 'success')
+        return redirect(url_for('order_success', order_id=new_order_id))
+
+    except Exception as e:
+        flash(f"Failed to place order: {str(e)}", "danger")
+        return redirect(url_for('home'))
+
+
+@app.route('/order-success/<int:order_id>')
+def order_success(order_id):
+    if 'user_email' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute('''
+            SELECT o.*, 
+                   p.title as product_title, p.price as product_price, p.photo_url,
+                   u.name as seller_name, u.mobile as seller_mobile, u.email as seller_email_addr
+            FROM orders o
+            JOIN products p ON o.product_id = p.id
+            LEFT JOIN users u ON o.seller_email = u.email
+            WHERE o.id = %s AND o.buyer_email = %s
+        ''', (order_id, session['user_email']))
+        
+        order_raw = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not order_raw:
+            flash("Order not found or unauthorized!", "danger")
+            return redirect(url_for('home'))
+
+        order_dict = dict(order_raw)
+        
+        order_dict['product'] = {
+            'title': order_dict.get('product_title'),
+            'price': order_dict.get('product_price'),
+            'photo_url': order_dict.get('photo_url')
+        }
+
+        order_dict['seller'] = {
+            'name': order_dict.get('seller_name'),
+            'mobile': order_dict.get('seller_mobile'),
+            'email': order_dict.get('seller_email_addr')
+        }
+
+        user_data = {
+            'email': session.get('user_email'),
+            'name': session.get('user_name'),
+            'role': session.get('user_role')
+        }
+
+        return render_template('order-success.html', order=order_dict, user=user_data, current_user=user_data)
+    except Exception as e:
+        return f"Error loading order success page: {str(e)}"
+
+
+# ==================== 🛠️ SELLER ORDERS ROUTE ====================
+
+@app.route('/seller/orders')
+def seller_orders():
+    if 'user_email' not in session:
+        flash("Please login to view your sales orders.", "danger")
+        return redirect(url_for('login'))
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute('''
+            SELECT o.*, p.title as product_title, p.price as product_price, p.photo_url 
+            FROM orders o
+            JOIN products p ON o.product_id = p.id
+            WHERE LOWER(o.seller_email) = LOWER(%s) 
+            ORDER BY o.created_at DESC
+        ''', (session['user_email'],))
+        
+        raw_orders = cursor.fetchall()
+        orders = []
+
+        for row in raw_orders:
+            order_dict = dict(row)
+            order_dict['product'] = {
+                'title': order_dict.get('product_title'),
+                'price': order_dict.get('product_price'),
+                'photo_url': order_dict.get('photo_url')
+            }
+            orders.append(order_dict)
+
+        cursor.close()
+        conn.close()
+
+        user_data = {
+            'email': session.get('user_email'),
+            'name': session.get('user_name'),
+            'role': session.get('user_role')
+        }
+
+        return render_template('seller-orders.html', orders=orders, user=user_data, current_user=user_data)
+    except Exception as e:
+        return f"Error loading seller orders: {str(e)}"
+
+
+@app.route('/update-order-status/<int:order_id>', methods=['POST'])
+def update_order_status(order_id):
+    if 'user_email' not in session and not session.get('is_admin'):
+        flash("Unauthorized action", "danger")
+        return redirect(url_for('login'))
+
+    status = request.form.get('status')
+    if status not in ['Approved', 'Confirmed', 'Delivered', 'Cancelled', 'Rejected']:
+        flash("Invalid status update!", "danger")
+        return redirect(url_for('seller_orders'))
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute("SELECT o.*, p.title as product_title FROM orders o JOIN products p ON o.product_id = p.id WHERE o.id = %s", (order_id,))
+        order = cursor.fetchone()
+
+        if not order:
+            cursor.close()
+            conn.close()
+            flash('Order not found', 'danger')
+            return redirect(url_for('home'))
+
+        # Check if caller is seller or admin
+        if not session.get('is_admin') and order['seller_email'].lower() != session['user_email'].lower():
+            cursor.close()
+            conn.close()
+            flash('Unauthorized action', 'danger')
+            return redirect(url_for('home'))
+
+        cursor.execute("UPDATE orders SET order_status = %s WHERE id = %s", (status, order_id))
+        
+        alert_msg = f"🚚 Update on Order #{order_id}: Your order status for '{order['product_title']}' has been updated to '{status}'."
+        cursor.execute('INSERT INTO notifications (product_id, message, user_email) VALUES (%s, %s, %s)', 
+                       (order['product_id'], alert_msg, order['buyer_email']))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        try:
+            buyer_email = order['buyer_email']
+            subject = f"🔔 Order #{order_id} Update: Status changed to {status}"
+            
+            email_body = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 20px;">
+                <div style="max-width: 550px; margin: 0 auto; background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                    <h2 style="color: #0d6efd;">DIU Smart Marketplace</h2>
+                    <p>Hello <b>{order['buyer_name']}</b>,</p>
+                    <p>Your order status has been updated by system authority.</p>
+                    <hr style="border: 0; border-top: 1px solid #eee;">
+                    <p><b>Order ID:</b> #{order_id}</p>
+                    <p><b>Product:</b> {order['product_title']}</p>
+                    <p><b>New Status:</b> <span style="color: #198754; font-weight: bold; font-size: 16px;">{status}</span></p>
+                    <hr style="border: 0; border-top: 1px solid #eee;">
+                    <p style="font-size: 13px; color: #6c757d;">Thank you for shopping on DIU Smart Marketplace!</p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            msg = MIMEMultipart()
+            msg['From'] = SENDER_EMAIL
+            msg['To'] = buyer_email
+            msg['Subject'] = subject
+            msg.attach(MIMEText(email_body, 'html'))
+
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+            server.starttls()
+            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.sendmail(SENDER_EMAIL, buyer_email, msg.as_string())
+            server.quit()
+        except Exception as mail_err:
+            print(f"⚠️ Buyer notification email failed: {str(mail_err)}")
+
+        flash(f'Order #{order_id} status updated to {status}. Notification sent to buyer!', 'success')
+    except Exception as e:
+        flash(f"Error updating order status: {str(e)}", "danger")
+
+    return redirect(request.referrer or url_for('seller_orders'))
+
+
 # ==================== 🔔 NOTIFICATION API ROUTES ====================
 
 @app.route('/api/notifications')
@@ -287,7 +620,7 @@ def get_notifications():
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         cursor.execute('''
             SELECT * FROM notifications 
-            WHERE user_email = %s AND is_read = FALSE 
+            WHERE LOWER(user_email) = LOWER(%s) AND is_read = FALSE 
             ORDER BY id DESC
         ''', (session['user_email'],))
         notifs = cursor.fetchall()
@@ -332,11 +665,11 @@ def toggle_wishlist():
         conn = get_db()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
-        cursor.execute('SELECT id FROM wishlist WHERE user_email = %s AND product_id = %s', (user_email, product_id))
+        cursor.execute('SELECT id FROM wishlist WHERE LOWER(user_email) = LOWER(%s) AND product_id = %s', (user_email, product_id))
         item = cursor.fetchone()
         
         if item:
-            cursor.execute('DELETE FROM wishlist WHERE user_email = %s AND product_id = %s', (user_email, product_id))
+            cursor.execute('DELETE FROM wishlist WHERE LOWER(user_email) = LOWER(%s) AND product_id = %s', (user_email, product_id))
             status = 'removed'
         else:
             cursor.execute('INSERT INTO wishlist (user_email, product_id) VALUES (%s, %s)', (user_email, product_id))
@@ -380,7 +713,7 @@ def register(role):
         try:
             conn = get_db()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
+            cursor.execute('SELECT * FROM users WHERE LOWER(email) = LOWER(%s)', (email,))
             user = cursor.fetchone()
 
             if user:
@@ -427,7 +760,7 @@ def forgot_password():
         try:
             conn = get_db()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
+            cursor.execute('SELECT * FROM users WHERE LOWER(email) = LOWER(%s)', (email,))
             user = cursor.fetchone()
             
             if not user:
@@ -471,7 +804,7 @@ def resend_otp(purpose):
         conn = get_db()
         cursor = conn.cursor()
         
-        cursor.execute('DELETE FROM otp_verifications WHERE email = %s AND purpose = %s', (email, purpose))
+        cursor.execute('DELETE FROM otp_verifications WHERE LOWER(email) = LOWER(%s) AND purpose = %s', (email, purpose))
         
         otp = str(random.randint(100000, 999999))
         expiry = datetime.now() + timedelta(minutes=5)
@@ -512,14 +845,14 @@ def verify_otp(purpose):
             
             cursor.execute('''
                 SELECT * FROM otp_verifications 
-                WHERE email = %s AND otp_code = %s AND purpose = %s AND expiry_time > %s
+                WHERE LOWER(email) = LOWER(%s) AND otp_code = %s AND purpose = %s AND expiry_time > %s
                 ORDER BY id DESC LIMIT 1
             ''', (email, input_otp, purpose, datetime.now()))
             
             valid_otp = cursor.fetchone()
             
             if valid_otp:
-                cursor.execute('DELETE FROM otp_verifications WHERE email = %s', (email,))
+                cursor.execute('DELETE FROM otp_verifications WHERE LOWER(email) = LOWER(%s)', (email,))
                 
                 if purpose == 'Registration':
                     reg = session.get('reg_data')
@@ -539,7 +872,7 @@ def verify_otp(purpose):
                         return redirect(url_for('verify_otp', purpose='Reset'))
                         
                     hashed_pwd = generate_password_hash(new_pass)
-                    cursor.execute('UPDATE users SET password = %s WHERE email = %s', (hashed_pwd, email))
+                    cursor.execute('UPDATE users SET password = %s WHERE LOWER(email) = LOWER(%s)', (hashed_pwd, email))
                     conn.commit()
                     
                     session.pop('reset_email', None)
@@ -568,7 +901,7 @@ def login():
         try:
             conn = get_db()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
+            cursor.execute('SELECT * FROM users WHERE LOWER(email) = LOWER(%s)', (email,))
             user = cursor.fetchone()
             cursor.close()
             conn.close()
@@ -625,7 +958,7 @@ def home():
         query = """
             SELECT p.*, u.name AS seller_name 
             FROM products p
-            LEFT JOIN users u ON p.seller_email = u.email
+            LEFT JOIN users u ON LOWER(p.seller_email) = LOWER(u.email)
             WHERE p.status IN ('Available', 'Sold Out')
         """
         params = []
@@ -649,7 +982,7 @@ def home():
             p_dict['comments'] = [dict(c) for c in cursor.fetchall()]
 
             if user_data:
-                cursor.execute('SELECT * FROM wishlist WHERE user_email = %s AND product_id = %s', (user_data['email'], p['id']))
+                cursor.execute('SELECT * FROM wishlist WHERE LOWER(user_email) = LOWER(%s) AND product_id = %s', (user_data['email'], p['id']))
                 fav = cursor.fetchone()
                 p_dict['is_fav'] = True if fav else False
             else:
@@ -674,7 +1007,7 @@ def home():
 
         cursor.close()
         conn.close()
-        return render_template('index.html', user=user_data, products=final_products, announcement=announcement_text, live_categories=live_categories, selected_category=category_filter)
+        return render_template('index.html', user=user_data, current_user=user_data, products=final_products, announcement=announcement_text, live_categories=live_categories, selected_category=category_filter)
     except Exception as e:
         return f"<h1>Database Error inside Home Feed</h1><p>{str(e)}</p>"
 
@@ -698,7 +1031,7 @@ def product_details_path(product_id):
         cursor.execute('''
             SELECT p.*, u.name AS seller_name, u.mobile AS seller_mobile
             FROM products p
-            LEFT JOIN users u ON p.seller_email = u.email
+            LEFT JOIN users u ON LOWER(p.seller_email) = LOWER(u.email)
             WHERE p.id = %s
         ''', (product_id,))
         product = cursor.fetchone()
@@ -718,7 +1051,7 @@ def product_details_path(product_id):
         product_dict['comments'] = [dict(c) for c in cursor.fetchall()]
         
         if 'user_email' in session:
-            cursor.execute('SELECT * FROM wishlist WHERE user_email = %s AND product_id = %s', (session['user_email'], product_id))
+            cursor.execute('SELECT * FROM wishlist WHERE LOWER(user_email) = LOWER(%s) AND product_id = %s', (session['user_email'], product_id))
             product_dict['is_fav'] = True if cursor.fetchone() else False
         else:
             product_dict['is_fav'] = False
@@ -734,7 +1067,7 @@ def product_details_path(product_id):
                 'role': session.get('user_role', 'admin')
             }
             
-        return render_template('product-details.html', product=product_dict, user=user_data)
+        return render_template('product-details.html', product=product_dict, user=user_data, current_user=user_data)
     except Exception as e:
         return f"<h1>Error loading product details</h1><p>{str(e)}</p>"
 
@@ -749,7 +1082,7 @@ def user_profile(email):
     try:
         conn = get_db()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
+        cursor.execute('SELECT * FROM users WHERE LOWER(email) = LOWER(%s)', (email,))
         profile_user = cursor.fetchone()
 
         if profile_user:
@@ -758,8 +1091,8 @@ def user_profile(email):
             cursor.execute('''
                 SELECT p.*, u.name AS seller_name 
                 FROM products p 
-                JOIN users u ON p.seller_email = u.email 
-                WHERE p.seller_email = %s 
+                JOIN users u ON LOWER(p.seller_email) = LOWER(u.email) 
+                WHERE LOWER(p.seller_email) = LOWER(%s) 
                 ORDER BY p.id DESC
             ''', (email,))
             products_list = cursor.fetchall()
@@ -830,7 +1163,7 @@ def update_profile_pic():
                 
                 conn = get_db()
                 cursor = conn.cursor()
-                cursor.execute('UPDATE users SET profile_pic = %s WHERE email = %s', (imgbb_url, session['user_email']))
+                cursor.execute('UPDATE users SET profile_pic = %s WHERE LOWER(email) = LOWER(%s)', (imgbb_url, session['user_email']))
                 conn.commit()
                 cursor.close()
                 conn.close()
@@ -853,7 +1186,7 @@ def delete_profile_pic():
     try:
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET profile_pic = 'default_avatar.png' WHERE email = %s", (session['user_email'],))
+        cursor.execute("UPDATE users SET profile_pic = 'default_avatar.png' WHERE LOWER(email) = LOWER(%s)", (session['user_email'],))
         conn.commit()
         cursor.close()
         conn.close()
@@ -971,7 +1304,7 @@ def mark_sold(product_id):
     try:
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute("UPDATE products SET status = 'Sold Out' WHERE id = %s AND seller_email = %s", (product_id, session['user_email']))
+        cursor.execute("UPDATE products SET status = 'Sold Out' WHERE id = %s AND LOWER(seller_email) = LOWER(%s)", (product_id, session['user_email']))
         conn.commit()
         cursor.close()
         conn.close()
@@ -987,7 +1320,7 @@ def mark_available(product_id):
     try:
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute("UPDATE products SET status = 'Available' WHERE id = %s AND seller_email = %s", (product_id, session['user_email']))
+        cursor.execute("UPDATE products SET status = 'Available' WHERE id = %s AND LOWER(seller_email) = LOWER(%s)", (product_id, session['user_email']))
         conn.commit()
         cursor.close()
         conn.close()
@@ -1010,7 +1343,7 @@ def edit_product(product_id):
         cursor.execute("SELECT * FROM products WHERE id = %s", (product_id,))
         product = cursor.fetchone()
         
-        if not product or (product['seller_email'] != session.get('user_email') and not session.get('is_admin')):
+        if not product or (product['seller_email'].lower() != session.get('user_email', '').lower() and not session.get('is_admin')):
             cursor.close()
             conn.close()
             flash("Unauthorized access or product not found!", "danger")
@@ -1112,12 +1445,13 @@ def delete_product(product_id):
             flash("Product not found!", "danger")
             return redirect(url_for('home'))
 
-        if prod['seller_email'] != session.get('user_email') and not session.get('is_admin'):
+        if prod['seller_email'].lower() != session.get('user_email', '').lower() and not session.get('is_admin'):
             cursor.close()
             conn.close()
             flash("Unauthorized action!", "danger")
             return redirect(url_for('home'))
 
+        cursor.execute("DELETE FROM orders WHERE product_id = %s", (product_id,))
         cursor.execute("DELETE FROM wishlist WHERE product_id = %s", (product_id,))
         cursor.execute("DELETE FROM comments WHERE product_id = %s", (product_id,))
         cursor.execute("DELETE FROM product_images WHERE product_id = %s", (product_id,))
@@ -1178,10 +1512,10 @@ def toggle_wishlist_fallback(product_id):
     try:
         conn = get_db()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute('SELECT * FROM wishlist WHERE user_email = %s AND product_id = %s', (user_email, product_id))
+        cursor.execute('SELECT * FROM wishlist WHERE LOWER(user_email) = LOWER(%s) AND product_id = %s', (user_email, product_id))
         fav = cursor.fetchone()
         if fav:
-            cursor.execute('DELETE FROM wishlist WHERE user_email = %s AND product_id = %s', (user_email, product_id))
+            cursor.execute('DELETE FROM wishlist WHERE LOWER(user_email) = LOWER(%s) AND product_id = %s', (user_email, product_id))
         else:
             cursor.execute('INSERT INTO wishlist (user_email, product_id) VALUES (%s, %s)', (user_email, product_id))
         conn.commit()
@@ -1206,9 +1540,9 @@ def my_wishlist():
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         cursor.execute('''
             SELECT p.*, u.name AS seller_name FROM products p 
-            LEFT JOIN users u ON p.seller_email = u.email
+            LEFT JOIN users u ON LOWER(p.seller_email) = LOWER(u.email)
             JOIN wishlist w ON p.id = w.product_id 
-            WHERE w.user_email = %s ORDER BY w.id DESC
+            WHERE LOWER(w.user_email) = LOWER(%s) ORDER BY w.id DESC
         ''', (user_data['email'],))
         products_list = cursor.fetchall()
         final_products = []
@@ -1224,7 +1558,7 @@ def my_wishlist():
             final_products.append(p_dict)
         cursor.close()
         conn.close()
-        return render_template('index.html', user=user_data, products=final_products, is_wishlist_page=True, live_categories=[])
+        return render_template('index.html', user=user_data, current_user=user_data, products=final_products, is_wishlist_page=True, live_categories=[])
     except Exception as e:
         print(f"⚠️ Wishlist Page Error: {str(e)}")
         return redirect(url_for('home'))
@@ -1274,7 +1608,7 @@ def change_password():
         try:
             conn = get_db()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
-            cursor.execute('SELECT * FROM users WHERE email = %s', (user_email,))
+            cursor.execute('SELECT * FROM users WHERE LOWER(email) = LOWER(%s)', (user_email,))
             user = cursor.fetchone()
             if not check_password_hash(user['password'], current_password):
                 flash("Current password is incorrect!", "danger")
@@ -1287,7 +1621,7 @@ def change_password():
                 conn.close()
                 return redirect(url_for('change_password'))
             hashed_password = generate_password_hash(password_input)
-            cursor.execute('UPDATE users SET password = %s WHERE email = %s', (hashed_password, user_email))
+            cursor.execute('UPDATE users SET password = %s WHERE LOWER(email) = LOWER(%s)', (hashed_password, user_email))
             conn.commit()
             cursor.close()
             conn.close()
@@ -1320,7 +1654,7 @@ def admin_login():
             try:
                 conn = get_db()
                 cursor = conn.cursor(cursor_factory=RealDictCursor)
-                cursor.execute('SELECT * FROM users WHERE email = %s', (admin_email,))
+                cursor.execute('SELECT * FROM users WHERE LOWER(email) = LOWER(%s)', (admin_email,))
                 user = cursor.fetchone()
                 cursor.close()
                 conn.close()
@@ -1338,7 +1672,6 @@ def admin_login():
         flash("Access Denied! Incorrect Admin Credentials.", "danger")
     return render_template('admin_login.html')
 
-# 🟢 UPDATE: Sellers & Buyers আলাদা ফিল্টার সহ এডমিন ইউজার রুট
 @app.route('/admin/users')
 def view_registered_users():
     if not session.get('is_admin'):
@@ -1359,15 +1692,18 @@ def view_registered_users():
         cursor.execute("SELECT COUNT(*) as count FROM products WHERE status = 'Pending'")
         pending_products_count = cursor.fetchone()['count']
 
+        cursor.execute("SELECT COUNT(*) as count FROM orders")
+        total_orders = cursor.fetchone()['count']
+
         stats = {
             "total_users": total_users,
             "total_sellers": total_sellers,
             "total_buyers": total_buyers,
             "total_products": total_products,
-            "pending_products_count": pending_products_count
+            "pending_products_count": pending_products_count,
+            "total_orders": total_orders
         }
 
-        # 🔹 Sellers এবং Buyers আলাদাভাবে কুয়েরি করা হলো
         cursor.execute("SELECT * FROM users WHERE role = 'seller' ORDER BY name ASC")
         all_sellers = [dict(u) for u in cursor.fetchall()]
 
@@ -1380,6 +1716,15 @@ def view_registered_users():
         cursor.execute("SELECT * FROM products ORDER BY id DESC")
         all_products = [dict(p) for p in cursor.fetchall()]
 
+        # 🌟 ADMIN-এর জন্য সব অর্ডারের ডাটা ট্র্যাকিং
+        cursor.execute('''
+            SELECT o.*, p.title as product_title, p.price as product_price 
+            FROM orders o
+            JOIN products p ON o.product_id = p.id
+            ORDER BY o.created_at DESC
+        ''')
+        all_orders = [dict(ord_item) for ord_item in cursor.fetchall()]
+
         cursor.execute("SELECT * FROM dynamic_categories ORDER BY id DESC")
         all_categories = [dict(cat) for cat in cursor.fetchall()]
 
@@ -1387,7 +1732,7 @@ def view_registered_users():
             SELECT c.id, c.user_name, c.text, c.created_at as timestamp, p.title as product_title, u.student_id 
             FROM comments c
             JOIN products p ON c.product_id = p.id
-            JOIN users u ON c.user_email = u.email
+            JOIN users u ON LOWER(c.user_email) = LOWER(u.email)
             ORDER BY c.id DESC
         ''')
         all_comments = [dict(row) for row in cursor.fetchall()]
@@ -1412,6 +1757,7 @@ def view_registered_users():
             all_sellers=all_sellers,
             all_buyers=all_buyers,
             all_products=all_products, 
+            all_orders=all_orders,
             stats=stats,
             all_categories=all_categories,
             all_comments=all_comments,
@@ -1423,7 +1769,88 @@ def view_registered_users():
     except Exception as e:
         return f"Admin Panel Fetch Error: {str(e)}"
 
-# 🟢 NEW: Admin DELETE USER Route (Permanent DB Deletion)
+
+# ==================== 💳 PAYMENT VERIFICATION ROUTES ====================
+
+@app.route('/admin/approve-payment/<int:order_id>')
+def admin_approve_payment(order_id):
+    if not session.get('is_admin'):
+        flash("Unauthorized access!", "danger")
+        return redirect(url_for('admin_login'))
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("UPDATE orders SET order_status = 'Approved' WHERE id = %s", (order_id,))
+        
+        cursor.execute("SELECT buyer_email, product_id FROM orders WHERE id = %s", (order_id,))
+        order = cursor.fetchone()
+        
+        if order:
+            alert_msg = f"✅ Payment Approved! Your order #{order_id} has been verified and approved."
+            cursor.execute('INSERT INTO notifications (product_id, message, user_email) VALUES (%s, %s, %s)',
+                           (order['product_id'], alert_msg, order['buyer_email']))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        flash(f"Order #{order_id} payment approved successfully!", "success")
+    except Exception as e:
+        flash(f"Error approving payment: {str(e)}", "danger")
+
+    return redirect(url_for('view_registered_users'))
+
+
+@app.route('/admin/reject-payment/<int:order_id>')
+def admin_reject_payment(order_id):
+    if not session.get('is_admin'):
+        flash("Unauthorized access!", "danger")
+        return redirect(url_for('admin_login'))
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("UPDATE orders SET order_status = 'Rejected' WHERE id = %s", (order_id,))
+        
+        cursor.execute("SELECT buyer_email, product_id FROM orders WHERE id = %s", (order_id,))
+        order = cursor.fetchone()
+        
+        if order:
+            alert_msg = f"❌ Payment Rejected! Verification failed for order #{order_id}."
+            cursor.execute('INSERT INTO notifications (product_id, message, user_email) VALUES (%s, %s, %s)',
+                           (order['product_id'], alert_msg, order['buyer_email']))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+        flash(f"Order #{order_id} payment rejected!", "warning")
+    except Exception as e:
+        flash(f"Error rejecting payment: {str(e)}", "danger")
+
+    return redirect(url_for('view_registered_users'))
+
+
+@app.route('/admin/delete-payment/<int:order_id>')
+@app.route('/admin/delete-order/<int:order_id>')
+def admin_delete_order(order_id):
+    if not session.get('is_admin'):
+        flash("Unauthorized access!", "danger")
+        return redirect(url_for('admin_login'))
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM orders WHERE id = %s", (order_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        flash(f"Order #{order_id} deleted successfully!", "success")
+    except Exception as e:
+        flash(f"Error deleting order: {str(e)}", "danger")
+
+    return redirect(url_for('view_registered_users'))
+
+
 @app.route('/admin/delete-user/<email>')
 def delete_user_by_admin(email):
     if not session.get('is_admin'):
@@ -1434,18 +1861,14 @@ def delete_user_by_admin(email):
         conn = get_db()
         cursor = conn.cursor()
 
-        # ১. ইউজারের সমস্ত ছবি মুছে ফেলা (Cascade না থাকলেও নিরাপদ রাখার জন্য)
-        cursor.execute("DELETE FROM product_images WHERE product_id IN (SELECT id FROM products WHERE seller_email = %s)", (email,))
-        
-        # ২. ইউজারের তৈরি সমস্ত প্রডাক্ট ও কমেন্ট মুছে ফেলা
-        cursor.execute("DELETE FROM products WHERE seller_email = %s", (email,))
-        cursor.execute("DELETE FROM comments WHERE user_email = %s", (email,))
-        cursor.execute("DELETE FROM wishlist WHERE user_email = %s", (email,))
-        cursor.execute("DELETE FROM notifications WHERE user_email = %s", (email,))
-        cursor.execute("DELETE FROM otp_verifications WHERE email = %s", (email,))
-        
-        # ৩. ডাটাবেজ থেকে মূল ইউজার স্থায়ীভাবে ডিলিট
-        cursor.execute("DELETE FROM users WHERE email = %s", (email,))
+        cursor.execute("DELETE FROM product_images WHERE product_id IN (SELECT id FROM products WHERE LOWER(seller_email) = LOWER(%s))", (email,))
+        cursor.execute("DELETE FROM orders WHERE LOWER(seller_email) = LOWER(%s) OR LOWER(buyer_email) = LOWER(%s)", (email, email))
+        cursor.execute("DELETE FROM products WHERE LOWER(seller_email) = LOWER(%s)", (email,))
+        cursor.execute("DELETE FROM comments WHERE LOWER(user_email) = LOWER(%s)", (email,))
+        cursor.execute("DELETE FROM wishlist WHERE LOWER(user_email) = LOWER(%s)", (email,))
+        cursor.execute("DELETE FROM notifications WHERE LOWER(user_email) = LOWER(%s)", (email,))
+        cursor.execute("DELETE FROM otp_verifications WHERE LOWER(email) = LOWER(%s)", (email,))
+        cursor.execute("DELETE FROM users WHERE LOWER(email) = LOWER(%s)", (email,))
         
         conn.commit()
         cursor.close()
@@ -1561,7 +1984,7 @@ def admin_ban_user(email):
     try:
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET is_banned = 1 WHERE email = %s", (email,))
+        cursor.execute("UPDATE users SET is_banned = 1 WHERE LOWER(email) = LOWER(%s)", (email,))
         conn.commit()
         cursor.close()
         conn.close()
@@ -1576,7 +1999,7 @@ def admin_unban_user(email):
     try:
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET is_banned = 0 WHERE email = %s", (email,))
+        cursor.execute("UPDATE users SET is_banned = 0 WHERE LOWER(email) = LOWER(%s)", (email,))
         conn.commit()
         cursor.close()
         conn.close()
@@ -1597,7 +2020,7 @@ def admin_approve_product(product_id):
         p = cursor.fetchone()
         
         if p:
-            cursor.execute('SELECT email FROM users WHERE email != %s', (p['seller_email'],))
+            cursor.execute('SELECT email FROM users WHERE LOWER(email) != LOWER(%s)', (p['seller_email'],))
             other_users = cursor.fetchall()
             for u in other_users:
                 alert_msg = f"📢 New Item Alert: '{p['title']}' listed in {p['category']} for ৳{p['price']}."
@@ -1649,7 +2072,7 @@ def clear_all_notifications():
     try:
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute('DELETE FROM notifications WHERE user_email = %s', (user_email,))
+        cursor.execute('DELETE FROM notifications WHERE LOWER(user_email) = LOWER(%s)', (user_email,))
         conn.commit()
         cursor.close()
         conn.close()
