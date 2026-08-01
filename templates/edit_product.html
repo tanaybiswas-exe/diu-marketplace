@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Product - DIU Marketplace</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 </head>
 <body class="bg-light">
     <div class="container my-5">
@@ -35,6 +36,16 @@
                             <input type="text" name="offer_text" class="form-control" value="{{ product.offer_text if product.offer_text else '' }}" placeholder="e.g. 20% OFF">
                         </div>
 
+                        <!-- 🟢 Free Delivery Option -->
+                        <div class="mb-3 p-3 bg-light rounded-3 border">
+                            <div class="form-check">
+                                <input class="form-check-input cursor-pointer" type="checkbox" id="free_delivery" name="free_delivery" value="true" {% if product.free_delivery %}checked{% endif %}>
+                                <label class="form-check-label fw-bold text-dark cursor-pointer" for="free_delivery">
+                                    🚚 Free Campus Delivery Available
+                                </label>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label fw-bold">Status</label>
                             <select name="status" class="form-select" disabled>
@@ -47,7 +58,6 @@
                             <label class="form-label fw-bold">Category</label>
                             <select name="category" class="form-select" required>
                                 <option value="">Select Category</option>
-                                
                                 {% if live_categories %}
                                     {% for cat in live_categories %}
                                         <option value="{{ cat }}" {% if product.category == cat %}selected{% endif %}>{{ cat }}</option>
@@ -61,6 +71,7 @@
                                 {% endif %}
                             </select>
                         </div>
+
                         <div class="row mb-3">
                             <div class="col">
                                 <label class="form-label fw-bold">Used Duration</label>
@@ -72,9 +83,36 @@
                             </div>
                         </div>
                         
+                        <!-- 🟢 WhatsApp Number -->
                         <div class="mb-3">
                             <label class="form-label fw-bold">WhatsApp Number</label>
-                            <input type="text" name="whatsapp" class="form-control" value="{{ product.whatsapp }}" required>
+                            <input type="tel" id="whatsapp_num" name="whatsapp" class="form-control" value="{{ product.whatsapp }}" required oninput="syncPaymentNumber()">
+                        </div>
+
+                        <!-- 🟢 Payment Number & Method Section -->
+                        <div class="mb-3 p-3 bg-light rounded-3 border">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input cursor-pointer" type="checkbox" id="same_as_whatsapp" onchange="togglePaymentInput()"
+                                {% if not product.seller_mobile or product.seller_mobile == product.whatsapp %}checked{% endif %}>
+                                <label class="form-check-label fw-bold text-dark cursor-pointer" for="same_as_whatsapp">
+                                    💳 Payment number is same as WhatsApp number
+                                </label>
+                            </div>
+
+                            <div class="row g-2 pt-1">
+                                <div class="col-4">
+                                    <label class="form-label fw-bold small mb-1">Method</label>
+                                    <select name="seller_payment_method" class="form-select form-select-sm fw-bold">
+                                        <option value="bKash" {% if product.seller_payment_method == 'bKash' %}selected{% endif %}>bKash</option>
+                                        <option value="Nagad" {% if product.seller_payment_method == 'Nagad' %}selected{% endif %}>Nagad</option>
+                                        <option value="Rocket" {% if product.seller_payment_method == 'Rocket' %}selected{% endif %}>Rocket</option>
+                                    </select>
+                                </div>
+                                <div id="different_payment_box" class="col-8 {% if not product.seller_mobile or product.seller_mobile == product.whatsapp %}d-none{% endif %}">
+                                    <label class="form-label fw-bold small mb-1">Payment Number</label>
+                                    <input type="tel" id="payment_num" name="seller_mobile" class="form-control form-control-sm" value="{{ product.seller_mobile if product.seller_mobile else '' }}" placeholder="01XXXXXXXXX">
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="mb-3">
@@ -84,12 +122,45 @@
                         
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold">Save Changes</button>
-                            <a href="{{ url_for('user_profile', email=session['user_email']) }}" class="btn btn-outline-secondary w-100 rounded-pill">Cancel</a>
+                            <a href="{{ url_for('home') }}" class="btn btn-outline-secondary w-100 rounded-pill">Cancel</a>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- 🟢 JavaScript for Auto Sync & Toggle Payment Input -->
+    <script>
+        function togglePaymentInput() {
+            const checkbox = document.getElementById('same_as_whatsapp');
+            const paymentBox = document.getElementById('different_payment_box');
+            const paymentInput = document.getElementById('payment_num');
+
+            if (checkbox.checked) {
+                paymentBox.classList.add('d-none');
+                paymentInput.removeAttribute('required');
+                syncPaymentNumber();
+            } else {
+                paymentBox.classList.remove('d-none');
+                paymentInput.setAttribute('required', 'required');
+            }
+        }
+
+        function syncPaymentNumber() {
+            const checkbox = document.getElementById('same_as_whatsapp');
+            const whatsappInput = document.getElementById('whatsapp_num');
+            const paymentInput = document.getElementById('payment_num');
+
+            if (checkbox.checked) {
+                paymentInput.value = whatsappInput.value;
+            }
+        }
+
+        // Initialize Form Submit Handler to ensure seller_mobile is sent correctly
+        document.querySelector('form').addEventListener('submit', function() {
+            syncPaymentNumber();
+        });
+    </script>
 </body>
 </html>
