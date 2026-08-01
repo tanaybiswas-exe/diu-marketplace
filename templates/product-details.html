@@ -109,11 +109,13 @@
                              class="thumb-img active-thumb" 
                              onclick="changeImage(this)">
 
-                        {% for photo in product.additional_photos %}
-                            <img src="{{ photo }}" 
-                                 class="thumb-img" 
-                                 onclick="changeImage(this)">
-                        {% endfor %}
+                        {% if product.additional_photos %}
+                            {% for photo in product.additional_photos %}
+                                <img src="{{ photo }}" 
+                                     class="thumb-img" 
+                                     onclick="changeImage(this)">
+                            {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
 
@@ -192,9 +194,15 @@
                         </div>
                         <div class="col-12 col-sm-6">
                             {% if product.status == 'Available' %}
-                                <button type="button" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#orderModal">
-                                    <i class="bi bi-cart-check-fill me-1"></i> Order Now
-                                </button>
+                                {% if session.get('user_email') %}
+                                    <button type="button" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#orderModal">
+                                        <i class="bi bi-cart-check-fill me-1"></i> Order Now
+                                    </button>
+                                {% else %}
+                                    <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm">
+                                        <i class="bi bi-cart-check-fill me-1"></i> Order Now
+                                    </a>
+                                {% endif %}
                             {% else %}
                                 <button class="btn btn-secondary btn-lg w-100 fw-bold shadow-sm" disabled>
                                     <i class="fas fa-times-circle me-1"></i> Out of Stock
@@ -221,16 +229,18 @@
                     </form>
 
                     <div class="list-group list-group-flush">
-                        {% for comment in product.comments %}
-                            <div class="list-group-item bg-light rounded-3 mb-2 p-3">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <h6 class="mb-0 fw-bold text-dark">{{ comment.user_name }}</h6>
+                        {% if product.comments %}
+                            {% for comment in product.comments %}
+                                <div class="list-group-item bg-light rounded-3 mb-2 p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <h6 class="mb-0 fw-bold text-dark">{{ comment.user_name }}</h6>
+                                    </div>
+                                    <p class="mb-0 text-secondary">{{ comment.text }}</p>
                                 </div>
-                                <p class="mb-0 text-secondary">{{ comment.text }}</p>
-                            </div>
+                            {% endfor %}
                         {% else %}
                             <p class="text-muted small">No questions posted yet. Be the first to ask!</p>
-                        {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -277,12 +287,10 @@
                 </div>
                 <div class="col-md-6">
                   <div class="form-check card p-3 border-primary h-100">
-                    <!-- 🟢 40 এর স্থানে 49 করা হয়েছে -->
                     <input class="form-check-input" type="radio" name="delivery_zone" id="outsideCampus" value="outside_campus" onchange="updateDeliveryCharge(49)">
                     <label class="form-check-label fw-bold" for="outsideCampus">
                       🔵 Outside Campus / Ashulia Area
-                      <!-- 🟢 ৳50 এর স্থানে ৳49 লেখা হয়েছে -->
-                      <span class="d-block text-primary small fw-normal">Delivery Charge: ৳49 </span>
+                      <span class="d-block text-primary small fw-normal">Delivery Charge: ৳49</span>
                     </label>
                   </div>
                 </div>
@@ -293,11 +301,11 @@
               <div class="row g-3 mb-3">
                 <div class="col-md-6">
                   <label class="form-label small fw-bold">Full Name</label>
-                  <input type="text" class="form-control" name="buyer_name" value="{{ current_user.name if current_user.is_authenticated else '' }}" required>
+                  <input type="text" class="form-control" name="buyer_name" value="{{ session.get('user_name', '') }}" required>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label small fw-bold">Mobile Number</label>
-                  <input type="tel" class="form-control" name="buyer_phone" value="{{ current_user.mobile if current_user.is_authenticated else '' }}" placeholder="e.g. 017XXXXXXXX" required>
+                  <input type="tel" class="form-control" name="buyer_phone" value="{{ session.get('user_mobile', '') }}" placeholder="e.g. 017XXXXXXXX" required>
                 </div>
                 <div class="col-12">
                   <label class="form-label small fw-bold">Exact Location / Drop Point</label>
@@ -312,8 +320,15 @@
               <!-- Advance Payment for Delivery Charge Section -->
               <div id="paymentSection" class="opacity-50" style="pointer-events: none;">
                 <h6 class="fw-bold border-bottom pb-2 text-secondary"><i class="bi bi-wallet2 me-1"></i> ৩. এডভান্স ডেলিভারি চার্জ পেমেন্ট (Advance Delivery Charge)</h6>
+                
+                <!-- 🟢 Dynamic Payment Box Showing Seller's Selected Method -->
                 <div class="alert alert-info small py-2 mb-3">
-                  <i class="bi bi-info-circle me-1"></i> <b>পেমেন্ট নিয়ম:</b> প্রডাক্টের আসল দাম <b>Cash on Delivery</b> তে প্রডাক্ট হাতে পাওয়ার পর সেলারকে দেবেন। শুধুমাত্র ডেলিভারি চার্জ (যদি থাকে) আগে পেমেন্ট করে TrxID ইনপুট দিন।
+                  <i class="bi bi-info-circle me-1"></i> <b>পেমেন্ট নিয়ম:</b> প্রডাক্টের আসল দাম <b>Cash on Delivery</b> তে প্রডাক্ট হাতে পাওয়ার পর সেলারকে দেবেন। শুধুমাত্র ডেলিভারি চার্জ (৳49) নিচের সেলারের মেথডে সেন্ডমানি/ক্যাশআউট করে TrxID দিন।<br>
+                  
+                  <div class="mt-2 p-2 bg-white rounded border d-inline-block shadow-sm">
+                      <span class="badge bg-danger fs-6 px-2 py-1">{{ product.seller_payment_method or 'bKash' }} Number</span>
+                      <strong class="text-dark ms-2 fs-6">: {{ product.seller_mobile or 'Contact Seller' }}</strong>
+                  </div>
                 </div>
                 
                 <div class="row g-3">
@@ -375,7 +390,7 @@
             element.classList.add('active-thumb');
         }
 
-        // 2. Open Zoom Modal (Fixed Memory Leak Issue)
+        // 2. Open Zoom Modal
         function openZoomModal() {
             let currentSrc = document.getElementById('currentImg').src;
             document.getElementById('zoomedModalImg').src = currentSrc;
