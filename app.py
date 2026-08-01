@@ -299,30 +299,35 @@ def init_db():
     app._db_inited = True
 
 
-# ==================== 📦 ORDER & DELIVERY ROUTES ====================
+# ==================== 📦 SAFE ORDER PLACEMENT ROUTE ====================
 
 @app.route('/place-order/<int:product_id>', methods=['POST'])
 def place_order(product_id):
+    # 🔴 ১. লগইন না থাকলে সরাসরি আটকে দিয়ে লগইন পেজে পাঠাবে
     if 'user_email' not in session:
-        flash('Please login first to place an order!', 'danger')
+        flash('❌ Please login first to place an order!', 'danger')
         return redirect(url_for('login'))
 
     try:
         conn = get_db()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-        cursor.execute("SELECT * FROM products WHERE id = %s", (product_id,))
+        # প্রোডাক্ট এবং সেলারের ইনফরমেশন আনা
+        cursor.execute("""
+            SELECT p.*, u.mobile AS seller_mobile, u.name AS seller_name 
+            FROM products p
+            LEFT JOIN users u ON LOWER(p.seller_email) = LOWER(u.email)
+            WHERE p.id = %s
+        """, (product_id,))
         product = cursor.fetchone()
 
         if not product:
             cursor.close()
             conn.close()
-            flash('Product not found!', 'danger')
+            flash('❌ Product not found!', 'danger')
             return redirect(url_for('home'))
 
-        cursor.execute("SELECT * FROM users WHERE email = %s", (product['seller_email'],))
-        seller = cursor.fetchone()
-
+        # তথ্য নেওয়া
         delivery_zone = request.form.get('delivery_zone')
         delivery_charge = 0.0 if delivery_zone == 'inside_campus' else 49.0
 
@@ -334,6 +339,7 @@ def place_order(product_id):
         sender_number = request.form.get('sender_number')
         trx_id = request.form.get('trx_id')
 
+        # অর্ডার ডাটাবেজে ডাটা ঢোকানো
         cursor.execute('''
             INSERT INTO orders (
                 product_id, buyer_email, seller_email, buyer_name, buyer_phone,
@@ -349,6 +355,7 @@ def place_order(product_id):
 
         new_order_id = cursor.fetchone()['id']
 
+        # নোটিফিকেশন পাঠানো
         alert_msg = f"📦 New Order Received! Item: '{product['title']}' from {buyer_name}."
         cursor.execute('INSERT INTO notifications (product_id, message, user_email) VALUES (%s, %s, %s)', 
                        (product['id'], alert_msg, product['seller_email']))
@@ -360,7 +367,7 @@ def place_order(product_id):
         host_url = request.host_url.rstrip('/')
         manage_order_url = f"{host_url}/seller/orders"
 
-        if seller and seller.get('email'):
+        if product.get('seller_email'):
             subject = f"📦 New Order Received for {product['title']} - DIU Smart Marketplace"
             
             email_html = f"""<!DOCTYPE html>
@@ -371,7 +378,7 @@ def place_order(product_id):
 <body style="font-family: Arial, sans-serif; background-color: #f4f6f9; padding: 20px; margin: 0;">
     <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 25px; border: 1px solid #e0e0e0;">
         <h2 style="color: #0d6efd; margin-top: 0;">🎉 You Have Received a New Order!</h2>
-        <p>Hello <b>{seller.get('name', 'Seller')}</b>,</p>
+        <p>Hello <b>{product.get('seller_name', 'Seller')}</b>,</p>
         <p>A buyer has placed an order for your listed product on DIU Smart Marketplace.</p>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         
@@ -407,19 +414,19 @@ def place_order(product_id):
             try:
                 msg = MIMEMultipart('alternative')
                 msg['From'] = SENDER_EMAIL
-                msg['To'] = seller['email']
+                msg['To'] = product['seller_email']
                 msg['Subject'] = subject
                 msg.attach(MIMEText(email_html, 'html'))
 
                 server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
                 server.starttls()
                 server.login(SENDER_EMAIL, SENDER_PASSWORD)
-                server.sendmail(SENDER_EMAIL, seller['email'], msg.as_string())
+                server.sendmail(SENDER_EMAIL, product['seller_email'], msg.as_string())
                 server.quit()
             except Exception as e:
                 print(f"⚠️ Order Mail Sending Error: {str(e)}")
 
-        flash('Order placed successfully!', 'success')
+        flash('🎉 Order placed successfully!', 'success')
         return redirect(url_for('order_success', order_id=new_order_id))
 
     except Exception as e:
@@ -956,7 +963,7 @@ def home():
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
         query = """
-            SELECT p.*, u.name AS seller_name 
+            SELECT p.*, u.name AS seller_name, u.mobile AS seller_mobile 
             FROM products p
             LEFT JOIN users u ON LOWER(p.seller_email) = LOWER(u.email)
             WHERE p.status IN ('Available', 'Sold Out')
@@ -1716,7 +1723,6 @@ def view_registered_users():
         cursor.execute("SELECT * FROM products ORDER BY id DESC")
         all_products = [dict(p) for p in cursor.fetchall()]
 
-        # 🌟 ADMIN-এর জন্য সব অর্ডারের ডাটা ট্র্যাকিং
         cursor.execute('''
             SELECT o.*, p.title as product_title, p.price as product_price 
             FROM orders o
