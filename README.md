@@ -1,6 +1,3 @@
-<div align="center">
-
-  <img src="https://i.ibb.co/206pb3c8/470508a8f5ef.jpg" alt="DIU Marketplace Banner" width="100%" height="250" style="object-fit: cover; border-radius: 12px;" />
 
   # 🛒 DIU Marketplace
   ### *A Secure Intra-University Ecosystem for Daffodil International University*
