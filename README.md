@@ -1,4 +1,6 @@
+<div align="center">
 
+ 
   # 🛒 DIU Marketplace
   ### *A Secure Intra-University Ecosystem for Daffodil International University*
 
